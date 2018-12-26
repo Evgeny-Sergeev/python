@@ -83,7 +83,7 @@ tracer_PI
 100	WAT_INJ_TR	453.2
 '''
 tracer = open(get_project_folder()+'/skript/tracer/tracer.txt','r')
-tracer_PI = open(get_project_folder()+'/skript/tracer/tracer_PI.txt','w')
+#tracer_PI = open(get_project_folder()+'/skript/tracer/tracer_PI.txt','w')
 dict_well_trac_A = open(get_project_folder()+'/skript/dict/dict_well_trac_A.txt','w')                                       #{'СКВАЖИНА': 'ДОБЫЧА ОТ ТРАССЕРА А'}
 dict_well_trac_RP = open(get_project_folder()+'/skript/dict/dict_well_trac_RP.txt','w')                                     #{'СКВАЖИНА': 'КАКАЯ ЧАСТЬ ДОБЫЧИ ВОДЫ ИДЕТ ОТ НАГНЕТАТЕЛЬНЫХ СКВАЖИН'}
 
@@ -95,32 +95,64 @@ well_trac_RP = dict()                                                           
 for i in range(len(content)):
     if i != 0:
         sum_inj_tracer = 0                                                                                                  #переменная сумма добычи трассера
-        print(content_matrix[i][0]+'\t'+content_matrix[0][4]+'\t'+str(round(float(content_matrix[i][4]),1)),file=tracer_PI)  #добыча трассера А
+        #print(content_matrix[i][0]+'\t'+content_matrix[0][4]+'\t'+str(round(float(content_matrix[i][4]),1)),file=tracer_PI)  #добыча трассера А
         print(content_matrix[i][0]+'\t'+content_matrix[0][4]+'\t'+str(round(float(content_matrix[i][4]),1)))
         dict_well_tracer = open(get_project_folder()+'/skript/tracer_prod/'+str(content_matrix[i][0])+'.txt','w')
         well_tracer = dict()
         for j in range(5,len(content_matrix[i])):                                                                           #проверка если добыча трассера не равна 0
             if float(content_matrix[i][j]) > 1:                                                                             #ислючаем трассеры с 0 и с маленькими значением (3E-7)
-                print(content_matrix[i][0]+'\t'+content_matrix[0][j].strip()+'\t'+str(round(float(content_matrix[i][j]),1)),file=tracer_PI)
+                #print(content_matrix[i][0]+'\t'+content_matrix[0][j].strip()+'\t'+str(round(float(content_matrix[i][j]),1)),file=tracer_PI)
                 print(content_matrix[i][0]+'\t'+content_matrix[0][j].strip()+'\t'+str(round(float(content_matrix[i][j]),1)))
                 well_tracer[content_matrix[0][j].strip()] = float(content_matrix[i][j])
                 sum_inj_tracer = sum_inj_tracer + float(content_matrix[i][j])
         print(content_matrix[i][0]+'\t'+'INJ'+'\t'+str(round(sum_inj_tracer,1)))
-        print(str(content_matrix[i][0])+'\t'+'INJ'+'\t'+str(round(sum_inj_tracer,1)),file=tracer_PI)   
+        #print(str(content_matrix[i][0])+'\t'+'INJ'+'\t'+str(round(sum_inj_tracer,1)),file=tracer_PI)   
         print(well_tracer,file=dict_well_tracer)
         dict_well_tracer.close()
         well_trac_A[content_matrix[i][0]] = round(float(content_matrix[i][4]),1)
         if float(content_matrix[i][4]) != 0:
             well_trac_RP[str(content_matrix[i][0])] = str(round(sum_inj_tracer/(float(content_matrix[i][4])+sum_inj_tracer),3))     #относительная добыча трассера от нагнетательных скважин
             print(content_matrix[i][0],'INJ/TOTAL',well_trac_RP[str(content_matrix[i][0])],'\n',sep='\t')
-            print(content_matrix[i][0],'INJ/TOTAL',well_trac_RP[str(content_matrix[i][0])],'\n',sep='\t',file=tracer_PI)
+            #print(content_matrix[i][0],'INJ/TOTAL',well_trac_RP[str(content_matrix[i][0])],'\n',sep='\t',file=tracer_PI)
         else:
             well_trac_RP[content_matrix[i][0]] = 0
+
 print(well_trac_A,file=dict_well_trac_A)
-print(well_trac_RP,file=dict_well_trac_RP)
-tracer.close()
-tracer_PI.close()
+print(well_trac_RP,file=dict_well_trac_RP)            
 dict_well_trac_A.close()
+dict_well_trac_A_file = open(get_project_folder()+'/skript/dict/dict_well_trac_A.txt','r') 
+tracer_IP = open(get_project_folder()+'/skript/tracer/tracer_IP.txt','w')
+dict_well_trac_A = eval(dict_well_trac_A_file.read())
+
+for m in get_all_models():
+    total_water = dict()
+    sum_tracer = dict()
+    tracer_RWI_well = dict()
+    for w in get_all_wells():
+        try:
+            dict_well_tracer_file = open(get_project_folder()+'/skript/tracer_prod/'+str(w.name)+'.txt','r')
+            dict_well_tracer = eval(dict_well_tracer_file.read())
+            total_water[w.name] = sum(dict_well_tracer.values()) + float(dict_well_trac_A[w.name])
+            if total_water[w.name] != 0:
+                tracer_RWI = open(get_project_folder()+'/skript/tracer_rwi/'+str(w.name)+'.txt','w')  
+                tracer_RWI_well = dict()
+                for k,v in dict_well_tracer.items():
+                    print(w.name,k,round(v/total_water[w.name],3),round(v,1),sep='\t')
+                    print(w.name,k,round(v/total_water[w.name],3),round(v,1),sep='\t',file=tracer_IP)
+                    tracer_RWI_well[k] = round(v/total_water[w.name],3)
+                print(w.name,'OWC',round(dict_well_trac_A[w.name]/total_water[w.name],3),round(dict_well_trac_A[w.name],1),sep='\t')
+                print(w.name,'OWC',round(dict_well_trac_A[w.name]/total_water[w.name],3),round(dict_well_trac_A[w.name],1),sep='\t',file=tracer_IP)
+                tracer_RWI_well['A'] = round(dict_well_trac_A[w.name]/total_water[w.name],3)
+                print(tracer_RWI_well,file=tracer_RWI)
+                tracer_RWI.close()
+            dict_well_tracer_file.close
+        except KeyError:
+            pass
+
+tracer.close()
+#tracer_PI.close()
+tracer_IP.close()
+dict_well_trac_A_file.close()
 dict_well_trac_RP.close()
 
 '''
@@ -165,12 +197,16 @@ dict_well_ROP.close()
 '''
 ОГРАНИЧЕНИЕ ЗАКАЧКИ - ARR_CUT
 '''
-MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
-MAIN = {'100', '101', '10106', '10107', '11700', '11701', '11919', '11920', '11921', '11921D', '11979', '11980', '11981', '11982', '11983', '11984', '11985', '11986', '11987', '11988', '12042', '12043', '12044', '12045', '12233', '12234', '12235', '12236', '12237', '12238', '12239', '12240', '12241', '12242', '13401', '13402', '13403', '13404', '13405', '13406', '13407', '13408', '13409', '13410', '13411', '13412', '13413', '13414', '13415', '13416', '13417', '13418', '13419', '13420', '13421', '13422', '13423', '13424', '13425', '13426', '13427', '13427D', '13428', '13429', '13430', '13431', '13432', '13433', '13434', '13435', '13436', '13437', '13438', '13439', '13440', '13441', '13442', '13444', '13445', '13446', '13448', '13449', '13450', '13451', '13452', '13453', '13454', '13455', '13456', '13457', '13458', '13458D', '13459', '13460', '13461', '13462', '13463', '13464', '13465', '13466', '13467', '13468', '13469', '13470', '13471', '13472', '13473', '13474', '13475', '13476', '13477', '13478', '13479', '13480', '13481', '13483', '13484', '13485', '13486', '13487', '13488', '13489', '13490', '13491', '13492', '13493', '13494', '13495', '13496', '13497', '13498', '13499', '13501', '13503', '13504', '13506', '13507', '13508', '13509', '13510', '13511', '13512', '13513', '13514', '13515', '13516', '13518', '13519', '13520', '13521', '13522', '13523', '13524', '13525', '13526', '13527', '13528', '13529', '13530', '13531', '13532', '13533', '13534', '13535', '13536', '13537', '13538', '13539', '13540', '13541', '13542', '13543', '13544', '13545', '13546', '13547', '13548', '13549', '13550', '13551', '13552', '13553', '13554', '13555', '13556', '13557', '13558', '13559', '13560', '13561', '13563', '13564', '13565', '13566', '13567', '13568', '13569', '13570', '13572', '13573', '13574', '13575', '13576', '13577', '13578', '13579', '13580', '13581', '13582', '13583', '13584', '13585', '13586', '13588', '13589', '13590', '13591', '13592', '13593', '13594', '13595', '13596', '13597', '13598', '13599', '13600', '15113', '15113D', '15114', '16304', '16336', '16482', '16526', '16529', '16530', '16537', '16539', '16540', '16541', '16544', '16547', '17419', '17483', '21292', '21440', '21493', '21502', '21503', '21504', '21505', '21506', '21507', '21508', '21509', '21510', '21511', '21512', '21513', '21514', '21515', '21516', '21517', '21519', '21520', '21521', '21522', '21523', '21524', '21525', '21526', '21527', '21528', '21529', '21530', '21531', '21532', '21533', '21535', '21536', '21537', '21538', '21539', '21540', '21541', '21542', '21543', '21544', '21545', '21546', '21547', '21548', '21550', '21551', '21552', '21553', '21555', '21556', '21557', '21558', '21559', '21560', '21561', '21562', '21563', '21564', '21565', '21566', '21567', '21568', '21569', '21570', '21571', '21572', '21573', '21575', '21576', '21577', '21578', '21579', '21580', '21581', '21582', '21583', '21584', '21587', '21588', '21589', '21590', '21591', '21592', '21593', '21594', '21595', '21596', '21598', '21599', '21600', '21601', '21602', '21603', '21604', '21607', '21608', '21611', '21612', '21614', '21615', '21616', '21617', '21618', '21619', '21620', '21621', '21622', '21625', '21626', '21627', '21629', '21630', '21632', '21633', '21634', '21635', '21636', '21637', '21638', '21640', '21641', '21642', '21643', '21645', '21646', '21647', '21648', '21650', '21651', '21652', '21653', '21654', '21655', '21656', '21658', '21659', '21660', '21661', '21662', '21663', '21664', '21665', '21666', '21667', '21668', '21671', '21672', '21673', '21674', '21675', '21678', '21679', '21680', '21681', '21682', '21683', '21684', '21684A', '21685', '21686', '21687', '21688', '21689', '21691', '21692', '21694', '21696', '21697', '21698', '21699', '21700', '21701', '21702', '21703', '21704', '21705', '21706', '21707', '21708', '21710', '21711', '21712', '21713', '21714', '21715', '21716', '21717', '21718', '21719', '21720', '21721', '21724', '21725', '21726', '21727', '21731', '21732', '21733', '21734', '21735', '21736', '21738', '21740', '21741', '21742', '21743', '21744', '21745', '21746', '21747', '21748', '21750', '21751', '21753', '21755', '21757', '21758', '21759', '21760', '21761', '21762', '21763', '21764', '21765', '21766', '21767', '21768', '21769', '21771', '21772', '21773', '21774', '21775', '21776', '21777', '21778', '21779', '21780', '21781', '21782', '21783', '21784', '21785', '21786', '21787', '21789', '21790', '21791', '21793', '21794', '21796', '21798', '21799', '21800', '25283', '25284', '25285', '25286', '25287', '25288', '25289', '25290', '25293', '25294', '25297', '25298', '25299', '25300', '27303', '27305', '27310', '27315', '27385', '27395', '27481', '27483', '27484', '27487', '32801', '32804', '32805', '32806', '32810', '32813', '32814', '32816', '32817', '32818', '32819', '32820', '32821', '32826', '32827', '32830', '32835', '32836', '32842', '32843', '32844', '32845', '32846', '32854', '32863', '32866', '32868', '32869', '32874', '32875', '32876', '32877', '32878', '32881', '32882', '32883', '32884', '32885', '32886', '32887', '32888', '32889', '32890', '32892', '32893', '32894', '32895', '32896', '32898', '32907', '32910', '32914', '32916', '32917', '32918', '32919', '32920', '32921', '32922', '32923', '32924', '32925', '32929', '32930', '32931', '32940', '32941', '32943', '32947', '32948', '32950', '32954', '32955', '32956', '32957', '32958', '32959', '32960', '3498', '3515', '3516', '3517', '3556', '3557', '3558', '3597', '48', '48D', '49', '5042', '51', '527', '53', '530', '54', '570', '571', '5712', '5713', '5714', '5715', '5716', '5717', '5718', '5719', '5719D', '572', '5720', '5721', '5722', '5722A', '5723', '5724', '5725', '5725A', '5726', '5727', '5728', '5728A', '5729', '5730', '5731', '5731A', '5732', '5733', '5734', '5735', '5736', '5737', '5738', '5739', '5740', '5741', '5741D', '5742', '5743', '5744', '5745', '5746', '5747', '5748', '5749', '5750', '5751', '58', '5801', '5802', '5803', '5804', '5805', '5806', '5806D', '5807', '5807D', '5808', '5809', '5810', '5811', '5811D', '5812', '5813', '5814', '5815', '5815D', '5816', '5816D', '5817', '5818', '5819', '5820', '5821', '5822', '5823', '5824', '5825', '5826', '5827', '5827D', '5828', '5829', '5830', '5831', '5832', '5833', '5834', '5835', '5836', '5837', '5838', '5839', '5840', '5840D', '5841', '5842', '5843', '5844', '5845', '5846', '5847', '5848', '5849', '5850', '5851', '5852', '5853', '5854', '5855', '5856', '5857', '5858', '5859', '5860', '5861', '5862', '5863', '5864', '5864D', '5865', '5865D', '5866', '5867', '5868', '5869', '5870', '5871', '5872', '5873', '5873D', '5874', '5875', '5876', '5877', '5878', '5879', '5880', '5881', '5882', '5883', '5884', '5884D', '5885', '5886', '5887', '5888', '5890', '5891', '5892', '5893', '5894', '5895', '5896', '5897', '5897D', '5898', '5899', '5900', '5901', '5902', '5902D', '5903', '5904', '5905', '5906', '5906D', '5907', '5907D', '5908', '5909', '5909D', '5910', '5911', '5912', '5913', '5913A', '5914', '5915', '5916', '5917', '5918', '5919', '5920', '5921', '5922', '5923', '5924', '5925', '5926', '5927', '5927D', '5928', '5928D', '5929', '5929D', '5930', '5930D', '5931', '5932', '5933', '5934', '5935', '5936', '5937', '5938', '5939', '5940', '5940D', '5941', '5941D', '5942', '5943', '5944', '5945', '5946', '5947', '5947D', '5948', '5949', '5950', '5951', '5952', '5953', '5954', '5955', '5955D', '5956', '5956D', '5957', '5958', '5959', '5960', '5961', '5962', '5963', '5964', '5965', '5966', '5967', '5968', '5969', '5970', '5971', '5972', '5973', '5974', '5975', '5976', '5977', '5978', '5979', '5980', '5981', '5982', '5983', '5984', '5985', '5986', '5987', '5988', '5991', '5992', '5993', '5994', '5995', '5996', '5997', '5998', '5999', '651', '652', '653', '7400', '7401', '7402', '77D', '8000', '8001', '8002', '8002D', '8003', '8004', '8005', '8006', '8007', '8008', '8008D', '8009', '8010', '8011', '8012', '8013', '8014', '8015', '8016', '8017', '8018', '8019', '8020', '8021', '8021D', '8022', '8022D', '8023', '8024', '8025', '8026', '8027', '8028', '8029', '8030', '8031', '8032', '8033', '8034', '8035', '8036', '8037', '8038', '8039', '8040', '8041', '8042', '8043', '8044', '8045', '8046', '8047', '8048', '8049', '8050', '8051', '8052', '8053', '8053B', '8054', '8055', '8056', '8057', '8058', '8059', '8060', '8061', '8062', '8063', '8064', '8065', '8066', '8067', '8068', '8069', '8070', '8071', '8072', '8073', '8074', '8075', '8076', '8077', '8078', '8079', '8080', '8081', '8081D', '8082', '8083', '8084', '8085', '8086', '8087', '8088', '8089', '8090', '8091', '8092', '8093', '8094', '8094D', '8095', '8096', '8097', '8098', '8099', '8100', '8101', '8102', '8103', '8104', '8106', '8107', '8108', '8109', '8110', '8111', '8112A', '8113', '8114', '8115', '8116', '8117', '8118', '8119', '8120', '8121', '8122', '8123', '8124', '8125', '8127', '8128', '8129', '8131', '8132', '8133', '8134', '8135', '8136', '8137', '8138', '8139', '8140', '8141', '8141D', '8142', '8143', '8144', '8145', '8146', '8147', '8148A', '8149', '8150', '8151', '8152', '8153', '8154', '8155', '8156', '8157', '8158', '8159', '8160', '8161', '8162', '8162D', '8163', '8164', '8165', '8166', '8167', '8168', '8168D', '8169', '8170', '8171', '8172', '8173', '8174', '8175', '8176', '8177', '8178', '8179', '8180', '8181', '8182', '8183', '8184', '8185', '8186', '8187', '8188', '8189', '8190', '8191', '8192', '8193', '8194', '8195', '8196', '8197', '8198', '8198D', '8199', '8200', '84', '84D'}
-#rel_arr_cut = 5                    # БЫЛО 5
+date = '01.01.1900'                # Дата с которорй программа будет выводить данные
 diff_arr_cut = 5                   # БЫЛО 1
 min_mult = 0.3
 m_t = 5                             #мульт для трассера 2-5
+down_injection = True
+up_injection = True
+
+
+MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
+MAIN = {'100', '101', '10106', '10107', '11700', '11701', '11919', '11920', '11921', '11921D', '11979', '11980', '11981', '11982', '11983', '11984', '11985', '11986', '11987', '11988', '12042', '12043', '12044', '12045', '12233', '12234', '12235', '12236', '12237', '12238', '12239', '12240', '12241', '12242', '13401', '13402', '13403', '13404', '13405', '13406', '13407', '13408', '13409', '13410', '13411', '13412', '13413', '13414', '13415', '13416', '13417', '13418', '13419', '13420', '13421', '13422', '13423', '13424', '13425', '13426', '13427', '13427D', '13428', '13429', '13430', '13431', '13432', '13433', '13434', '13435', '13436', '13437', '13438', '13439', '13440', '13441', '13442', '13444', '13445', '13446', '13448', '13449', '13450', '13451', '13452', '13453', '13454', '13455', '13456', '13457', '13458', '13458D', '13459', '13460', '13461', '13462', '13463', '13464', '13465', '13466', '13467', '13468', '13469', '13470', '13471', '13472', '13473', '13474', '13475', '13476', '13477', '13478', '13479', '13480', '13481', '13483', '13484', '13485', '13486', '13487', '13488', '13489', '13490', '13491', '13492', '13493', '13494', '13495', '13496', '13497', '13498', '13499', '13501', '13503', '13504', '13506', '13507', '13508', '13509', '13510', '13511', '13512', '13513', '13514', '13515', '13516', '13518', '13519', '13520', '13521', '13522', '13523', '13524', '13525', '13526', '13527', '13528', '13529', '13530', '13531', '13532', '13533', '13534', '13535', '13536', '13537', '13538', '13539', '13540', '13541', '13542', '13543', '13544', '13545', '13546', '13547', '13548', '13549', '13550', '13551', '13552', '13553', '13554', '13555', '13556', '13557', '13558', '13559', '13560', '13561', '13563', '13564', '13565', '13566', '13567', '13568', '13569', '13570', '13572', '13573', '13574', '13575', '13576', '13577', '13578', '13579', '13580', '13581', '13582', '13583', '13584', '13585', '13586', '13588', '13589', '13590', '13591', '13592', '13593', '13594', '13595', '13596', '13597', '13598', '13599', '13600', '15113', '15113D', '15114', '16304', '16336', '16482', '16526', '16529', '16530', '16537', '16539', '16540', '16541', '16544', '16547', '17419', '17483', '21292', '21440', '21493', '21502', '21503', '21504', '21505', '21506', '21507', '21508', '21509', '21510', '21511', '21512', '21513', '21514', '21515', '21516', '21517', '21519', '21520', '21521', '21522', '21523', '21524', '21525', '21526', '21527', '21528', '21529', '21530', '21531', '21532', '21533', '21535', '21536', '21537', '21538', '21539', '21540', '21541', '21542', '21543', '21544', '21545', '21546', '21547', '21548', '21550', '21551', '21552', '21553', '21555', '21556', '21557', '21558', '21559', '21560', '21561', '21562', '21563', '21564', '21565', '21566', '21567', '21568', '21569', '21570', '21571', '21572', '21573', '21575', '21576', '21577', '21578', '21579', '21580', '21581', '21582', '21583', '21584', '21587', '21588', '21589', '21590', '21591', '21592', '21593', '21594', '21595', '21596', '21598', '21599', '21600', '21601', '21602', '21603', '21604', '21607', '21608', '21611', '21612', '21614', '21615', '21616', '21617', '21618', '21619', '21620', '21621', '21622', '21625', '21626', '21627', '21629', '21630', '21632', '21633', '21634', '21635', '21636', '21637', '21638', '21640', '21641', '21642', '21643', '21645', '21646', '21647', '21648', '21650', '21651', '21652', '21653', '21654', '21655', '21656', '21658', '21659', '21660', '21661', '21662', '21663', '21664', '21665', '21666', '21667', '21668', '21671', '21672', '21673', '21674', '21675', '21678', '21679', '21680', '21681', '21682', '21683', '21684', '21684A', '21685', '21686', '21687', '21688', '21689', '21691', '21692', '21694', '21696', '21697', '21698', '21699', '21700', '21701', '21702', '21703', '21704', '21705', '21706', '21707', '21708', '21710', '21711', '21712', '21713', '21714', '21715', '21716', '21717', '21718', '21719', '21720', '21721', '21724', '21725', '21726', '21727', '21731', '21732', '21733', '21734', '21735', '21736', '21738', '21740', '21741', '21742', '21743', '21744', '21745', '21746', '21747', '21748', '21750', '21751', '21753', '21755', '21757', '21758', '21759', '21760', '21761', '21762', '21763', '21764', '21765', '21766', '21767', '21768', '21769', '21771', '21772', '21773', '21774', '21775', '21776', '21777', '21778', '21779', '21780', '21781', '21782', '21783', '21784', '21785', '21786', '21787', '21789', '21790', '21791', '21793', '21794', '21796', '21798', '21799', '21800', '25283', '25284', '25285', '25286', '25287', '25288', '25289', '25290', '25293', '25294', '25297', '25298', '25299', '25300', '27303', '27305', '27310', '27315', '27385', '27395', '27481', '27483', '27484', '27487', '32801', '32804', '32805', '32806', '32810', '32813', '32814', '32816', '32817', '32818', '32819', '32820', '32821', '32826', '32827', '32830', '32835', '32836', '32842', '32843', '32844', '32845', '32846', '32854', '32863', '32866', '32868', '32869', '32874', '32875', '32876', '32877', '32878', '32881', '32882', '32883', '32884', '32885', '32886', '32887', '32888', '32889', '32890', '32892', '32893', '32894', '32895', '32896', '32898', '32907', '32910', '32914', '32916', '32917', '32918', '32919', '32920', '32921', '32922', '32923', '32924', '32925', '32929', '32930', '32931', '32940', '32941', '32943', '32947', '32948', '32950', '32954', '32955', '32956', '32957', '32958', '32959', '32960', '3498', '3515', '3516', '3517', '3556', '3557', '3558', '3597', '48', '48D', '49', '5042', '51', '527', '53', '530', '54', '570', '571', '5712', '5713', '5714', '5715', '5716', '5717', '5718', '5719', '5719D', '572', '5720', '5721', '5722', '5722A', '5723', '5724', '5725', '5725A', '5726', '5727', '5728', '5728A', '5729', '5730', '5731', '5731A', '5732', '5733', '5734', '5735', '5736', '5737', '5738', '5739', '5740', '5741', '5741D', '5742', '5743', '5744', '5745', '5746', '5747', '5748', '5749', '5750', '5751', '58', '5801', '5802', '5803', '5804', '5805', '5806', '5806D', '5807', '5807D', '5808', '5809', '5810', '5811', '5811D', '5812', '5813', '5814', '5815', '5815D', '5816', '5816D', '5817', '5818', '5819', '5820', '5821', '5822', '5823', '5824', '5825', '5826', '5827', '5827D', '5828', '5829', '5830', '5831', '5832', '5833', '5834', '5835', '5836', '5837', '5838', '5839', '5840', '5840D', '5841', '5842', '5843', '5844', '5845', '5846', '5847', '5848', '5849', '5850', '5851', '5852', '5853', '5854', '5855', '5856', '5857', '5858', '5859', '5860', '5861', '5862', '5863', '5864', '5864D', '5865', '5865D', '5866', '5867', '5868', '5869', '5870', '5871', '5872', '5873', '5873D', '5874', '5875', '5876', '5877', '5878', '5879', '5880', '5881', '5882', '5883', '5884', '5884D', '5885', '5886', '5887', '5888', '5890', '5891', '5892', '5893', '5894', '5895', '5896', '5897', '5897D', '5898', '5899', '5900', '5901', '5902', '5902D', '5903', '5904', '5905', '5906', '5906D', '5907', '5907D', '5908', '5909', '5909D', '5910', '5911', '5912', '5913', '5913A', '5914', '5915', '5916', '5917', '5918', '5919', '5920', '5921', '5922', '5923', '5924', '5925', '5926', '5927', '5927D', '5928', '5928D', '5929', '5929D', '5930', '5930D', '5931', '5932', '5933', '5934', '5935', '5936', '5937', '5938', '5939', '5940', '5940D', '5941', '5941D', '5942', '5943', '5944', '5945', '5946', '5947', '5947D', '5948', '5949', '5950', '5951', '5952', '5953', '5954', '5955', '5955D', '5956', '5956D', '5957', '5958', '5959', '5960', '5961', '5962', '5963', '5964', '5965', '5966', '5967', '5968', '5969', '5970', '5971', '5972', '5973', '5974', '5975', '5976', '5977', '5978', '5979', '5980', '5981', '5982', '5983', '5984', '5985', '5986', '5987', '5988', '5991', '5992', '5993', '5994', '5995', '5996', '5997', '5998', '5999', '651', '652', '653', '7400', '7401', '7402', '77D', '8000', '8001', '8002', '8002D', '8003', '8004', '8005', '8006', '8007', '8008', '8008D', '8009', '8010', '8011', '8012', '8013', '8014', '8015', '8016', '8017', '8018', '8019', '8020', '8021', '8021D', '8022', '8022D', '8023', '8024', '8025', '8026', '8027', '8028', '8029', '8030', '8031', '8032', '8033', '8034', '8035', '8036', '8037', '8038', '8039', '8040', '8041', '8042', '8043', '8044', '8045', '8046', '8047', '8048', '8049', '8050', '8051', '8052', '8053', '8053B', '8054', '8055', '8056', '8057', '8058', '8059', '8060', '8061', '8062', '8063', '8064', '8065', '8066', '8067', '8068', '8069', '8070', '8071', '8072', '8073', '8074', '8075', '8076', '8077', '8078', '8079', '8080', '8081', '8081D', '8082', '8083', '8084', '8085', '8086', '8087', '8088', '8089', '8090', '8091', '8092', '8093', '8094', '8094D', '8095', '8096', '8097', '8098', '8099', '8100', '8101', '8102', '8103', '8104', '8106', '8107', '8108', '8109', '8110', '8111', '8112A', '8113', '8114', '8115', '8116', '8117', '8118', '8119', '8120', '8121', '8122', '8123', '8124', '8125', '8127', '8128', '8129', '8131', '8132', '8133', '8134', '8135', '8136', '8137', '8138', '8139', '8140', '8141', '8141D', '8142', '8143', '8144', '8145', '8146', '8147', '8148A', '8149', '8150', '8151', '8152', '8153', '8154', '8155', '8156', '8157', '8158', '8159', '8160', '8161', '8162', '8162D', '8163', '8164', '8165', '8166', '8167', '8168', '8168D', '8169', '8170', '8171', '8172', '8173', '8174', '8175', '8176', '8177', '8178', '8179', '8180', '8181', '8182', '8183', '8184', '8185', '8186', '8187', '8188', '8189', '8190', '8191', '8192', '8193', '8194', '8195', '8196', '8197', '8198', '8198D', '8199', '8200', '84', '84D'}
 
 from math import sqrt
 from datetime import datetime
@@ -178,22 +214,20 @@ ARR_CUT = open(get_project_folder()+'/skript/ARR_CUT.txt','w')
 arr_cut_dict_file = open(get_project_folder()+'/skript/dict/arr_cut_dict.txt','w')
 dict_well_picks = open(get_project_folder()+'/skript/dict/dict_well_picks.txt','r')
 dict_well_trac_A=open(get_project_folder()+'/skript/dict/dict_well_trac_A.txt','r')
-dict_well_perf = open(get_project_folder()+'/skript/dict/dict_well_perf.txt','r')
-#dict_res_pressure_file = open(get_project_folder()+'/skript/dict/dict_res_pressure.txt','r')            #АДАПТАЦИЯ ДЕПРЕССИИ/ПЛАСТОВОГО ДАВЛЕНИЯ (за весь период)
+dict_well_perf_prod_file = open(get_project_folder()+'/skript/dict/dict_well_perf_prod.txt','r')
+dict_well_perf_inj_file = open(get_project_folder()+'/skript/dict/dict_well_perf_inj.txt','r')
 dict_prod_working_date_file = open(get_project_folder()+'/skript/dict/dict_prod_working_date.txt','r')
 dict_inj_working_date_file = open(get_project_folder()+'/skript/dict/dict_inj_working_date.txt','r')
 
 well_picks = eval(dict_well_picks.read())
 well_trac_A = eval(dict_well_trac_A.read())
-well_perf = eval(dict_well_perf.read())
+dict_well_perf_prod = eval(dict_well_perf_prod_file.read())
+dict_well_perf_inj = eval(dict_well_perf_inj_file.read())
 dict_prod_working_date = eval(dict_prod_working_date_file.read())
 dict_inj_working_date = eval(dict_inj_working_date_file.read())
-#dict_res_pressure = eval(dict_res_pressure_file.read())
 print('EQUALS\n',file=ARR_CUT)
 
 arr_cut_dict = dict()
-#prod_press_dict = dict()
-#ROP_dict_summary = dict()
 ROP_tracer_press = dict()
 
 RP_h_interp = graph (type = 'well', default_value = 0)
@@ -249,7 +283,6 @@ def check_pressure(i_w,p_w):
     for m in get_all_models():
         first_date = datetime.strptime(dict_inj_working_date[i_w].split(',')[0], "%d.%m.%Y")
         last_date = datetime.strptime(dict_inj_working_date[i_w].split(',')[1], "%d.%m.%Y")
-#        print(i_w,p_w,'Давление за период_1: '+first_date.strftime("%d.%m.%Y")+' - '+last_date.strftime("%d.%m.%Y"),sep='\t')
         for w in get_wells_by_mask(p_w):  
             for t in get_all_timesteps():            
                 if RP_h_interp[m,w,t] != 0:
@@ -280,7 +313,6 @@ def dif_oil_prod(p_w):
     
 
 def fun_arr_cut(i_w):
-#    print(eval('(k_mult_dif_oil_{})'.format(w.name)),file=ARR_CUT)
     k_mult_dif_oil_well = round(eval('sum(k_mult_dif_oil_{})'.format(w.name)),1)
     k_mult_tracer_well = round(eval('sum(k_mult_tracer_{})'.format(i_w)),2)
     if eval('len(mult_tracer_{})'.format(i_w)) != 0:
@@ -293,36 +325,43 @@ def fun_arr_cut(i_w):
     else:
         press_mult = 1
         
-    if k_mult_dif_oil_well < -1*diff_arr_cut and sum_trac > 0.1:
-#    if sum_mult_1/rel_arr_cut > sum_mult_2 and abs(sum_mult_1-sum_mult_2)+1 > diff_arr_cut and sum_trac > 0.1:
-        mult = round((1/abs(k_mult_dif_oil_well-1))**(1/3),2)
-#        mult = round((1/(sum_mult_1-sum_mult_2+1))**(1/3),2)
-        for k,v in MODEL_CELLS.items():
-            if set(k) & set(well_perf[i_w]) != set():
-                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} DOWN МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t')
-                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} DOWN МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t',file=ARR_CUT)
-                if mult < min_mult:
-                    mult = min_mult
-                arr_cut_dict[i_w] = mult
-            else:
-                pass
-#        print(w.name,RI,BHP,round(sum_trac,1),round(sum_mult_1,2),round(sum_mult_2,2),start_inj_date(w.name),'DOWN',sep='\t')
-#        print(w.name,start_inj_date(w.name),'PERF','4*',mult,'-- DOWN / МАХ ДАВЛЕНИЕ: %d / ЗАКАЧКА: %.2f / delt: %.2f' %(BHP,RI,sum_mult_1-sum_mult_2+1),sep='\t')
+    if k_mult_dif_oil_well < -1*diff_arr_cut and sum_trac > 0.1 and down_injection:
+        mult = round((1/(1-k_mult_dif_oil_well))**(1/3),2)
+        if mult < min_mult:
+            mult = min_mult
+        arr_cut_dict[i_w] = mult
+#        print(k_mult_dif_oil_well,file=ARR_CUT)
+        print('{}\tzone_{}\t{}\t{}-{} DOWN МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_well_perf_inj[i_w],mult,dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t')
+        print('{}\tzone_{}\t{}\t{}-{} DOWN МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_well_perf_inj[i_w],mult,dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t',file=ARR_CUT)
 
-#    elif k_mult_dif_oil_well > diff_arr_cut and RI < 0.95 and sum_trac > 0.1:      
-##    elif sum_mult_2/rel_arr_cut > sum_mult_1 and abs(sum_mult_1-sum_mult_2)+1 > diff_arr_cut and RI < 0.98 and sum_trac > 0.1:
-#        mult = round((k_mult_dif_oil_well+1)**(1/3),2)
-##        mult = round((-sum_mult_1+sum_mult_2+1)**(1/3),2)
 #        for k,v in MODEL_CELLS.items():
 #            if set(k) & set(well_perf[i_w]) != set():
-#                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} UP МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t')
-#                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} UP МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t',file=ARR_CUT)
+#                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} DOWN МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t')
+#                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} DOWN МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t',file=ARR_CUT)
+#                if mult < min_mult:
+#                    mult = min_mult
 #                arr_cut_dict[i_w] = mult
 #            else:
 #                pass
+#        print(w.name,RI,BHP,round(sum_trac,1),round(sum_mult_1,2),round(sum_mult_2,2),start_inj_date(w.name),'DOWN',sep='\t')
+#        print(w.name,start_inj_date(w.name),'PERF','4*',mult,'-- DOWN / МАХ ДАВЛЕНИЕ: %d / ЗАКАЧКА: %.2f / delt: %.2f' %(BHP,RI,sum_mult_1-sum_mult_2+1),sep='\t')
 
-#        print(w.name,RI,BHP,round(sum_trac,1),start_inj_date(w.name),'UP',sep='\t')
-#        print(w.name,start_inj_date(w.name),'PERF','4*',mult,'-- UP / МАХ ДАВЛЕНИЕ: %d / ЗАКАЧКА: %.2f / delt: %.2f' %(BHP,RI,sum_mult_2-sum_mult_1+1),sep='\t')
+    elif k_mult_dif_oil_well > diff_arr_cut and RI < 0.95 and sum_trac > 0.1 and up_injection:      
+        mult = round((k_mult_dif_oil_well+1)**(1/3),2)
+        if mult > 1/min_mult:
+            mult = round(1/min_mult,2)
+        arr_cut_dict[i_w] = mult
+#        print(k_mult_dif_oil_well,file=ARR_CUT)
+        print('{}\tzone_{}\t{}\t{}-{} UP МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_well_perf_inj[i_w],mult,dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t')
+        print('{}\tzone_{}\t{}\t{}-{} UP МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_well_perf_inj[i_w],mult,dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t',file=ARR_CUT)
+##        for k,v in MODEL_CELLS.items():
+##            if set(k) & set(well_perf[i_w]) != set():
+##                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} UP МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t')
+##                print('ARR_CUT',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ -- {} {}-{} UP МАХ ДАВЛЕНИЕ: {} / ЗАКАЧКА: {} / TOTAL:mult1_mult2_tracer_press: {};{};{};{} mult_ROP_tracer_press: {}'.format(str(i_w),dict_inj_working_date[i_w].split(',')[0][-7:],dict_inj_working_date[i_w].split(',')[1][-7:],float(BHP),round(float(RI),2),k_mult_dif_oil_well,k_mult_tracer_well,mult_tracer_well,press_mult,ROP_tracer_press[w.name]),sep='\t',file=ARR_CUT)
+##                arr_cut_dict[i_w] = mult
+##            else:
+##                pass
+
     else:
         print(w.name,RI,BHP,round(sum_trac,1),start_inj_date(w.name),'NO_ACTION',sep='\t')
 
@@ -350,7 +389,6 @@ for m in get_all_models():
                 exec('mult_tracer_{}=[]'.format(w.name))
                 exec('k_mult_tracer_{}=[]'.format(w.name))
                 exec('k_mult_dif_oil_{}=[]'.format(w.name))
-#                ROP_dict_summary[w.name] = ''
                 ROP_tracer_press[w.name] = ''
                 x = well_picks[str(w.name)].split(' ')[0]
                 y = well_picks[str(w.name)].split(' ')[1]
@@ -363,7 +401,6 @@ for m in get_all_models():
                 else:
                     RI = 0
                 sum_trac = 0
-#                sum_mult_1 = sum_mult_2 = sum_trac = 0
                 BHP = round(float(WBHPT[m,w].max(dates='all')))
                 for key, val in dict_tracer_inj.items():
                     well = set()
@@ -381,15 +418,11 @@ for m in get_all_models():
                         y_p = float(well_picks[key].split(' ')[1])
                         dist = round(sqrt((x_i-x_p)**2+(y_i-y_p)**2),1)                
                         if ROP_dict[key] < 0.95 and ROP_dict[key] != 0 and (well & MAIN != set()):
-#                            mult_cut_1 = round(RP_Of_Tracer/ROP_dict[key],3)
-#                            sum_mult_1 = mult_cut_1 + sum_mult_1
                             mult_tracer = RP_Of_Tracer*(1-m_t)/(0.9*m_t)+(m_t-0.1)/(0.9*m_t)
                             if RP_Of_Tracer < 0.1:
                                 mult_tracer = 1
                             mult_tracer = mult_tracer*ROP_dict[key]
-                        elif ROP_dict[key] > 1.05 and (well & MAIN != set()):
-#                            mult_cut_2 = RP_Of_Tracer*ROP_dict[key]
-#                            sum_mult_2 = mult_cut_2 + sum_mult_2   
+                        elif ROP_dict[key] > 1.05 and (well & MAIN != set()): 
                             mult_tracer = RP_Of_Tracer*(m_t-1)/0.9+(0.1*m_t+1)/0.9
                             if RP_Of_Tracer < 0.1:
                                 mult_tracer = 1   
@@ -403,16 +436,14 @@ for m in get_all_models():
                             eval('mult_tracer_{}.append(mult_tracer)'.format(w.name))
                             eval('k_mult_tracer_{}.append(k_mult_tracer)'.format(w.name))
                             eval('k_mult_dif_oil_{}.append(k_mult_dif_oil_with_tracer)'.format(w.name))
-#                            dif_oil_prod = dif_oil_prod(key)
-                            ROP_tracer_press[w.name] = ROP_tracer_press[w.name]+'('+key+'_'+str(len(str(k_mult_dif_oil)))+':'+str(k_mult_dif_oil_with_tracer)+' '+str(ROP_dict[key])+' '+str(RP_Of_Tracer)+' '+str(avr_pres)+') '                         
-#                            ROP_dict_summary[w.name] = ROP_dict_summary[w.name]+key+':'+str(ROP_dict[key])+' '
+                            ROP_tracer_press[w.name] = ROP_tracer_press[w.name]+'('+key+'_'+str(len(str(k_mult_dif_oil)))+':z_'+dict_well_perf_prod[key]+' '+str(k_mult_dif_oil_with_tracer)+' '+str(ROP_dict[key])+' '+str(RP_Of_Tracer)+' '+str(avr_pres)+') '                         
                             print(w.name,key,ROP_dict[key],RP_Of_Tracer,dist,avr_pres,sep='\t')
                         elif well & MAIN == set() and RP_Of_Tracer  > 0.05:
                             print(w.name,key,'БУФЕР',sep='\t')
                         sum_trac = sum_trac + RP_Of_Tracer
                         dict_well_tracer.close()
-#                if abs(sum_mult_1-sum_mult_2) > 0.05:
-                fun_arr_cut(w.name)
+                if datetime.strptime(dict_inj_working_date[w.name].split(',')[0], "%d.%m.%Y") >= datetime.strptime(date, "%d.%m.%Y"):
+                    fun_arr_cut(w.name)
     
                 tracer_inj.close()
             except FileNotFoundError:
@@ -426,8 +457,8 @@ ARR_CUT.close()
 arr_cut_dict_file.close()
 dict_well_picks.close()
 dict_well_trac_A.close()
-dict_well_perf.close()
-#dict_res_pressure_file.close()
+dict_well_perf_prod_file.close()
+dict_well_perf_inj_file.close()
 
 '''
 СОЗДАНИЕ СЛОВОРЯ - (Отношение добычи воды по пропласткам)
@@ -471,36 +502,31 @@ for m in get_all_models():
 print(well_WC_interval,file=dict_well_WC_interval)
 dict_well_WC_interval.close()       
 
-
 '''
 чтение данных из словаря (анализ обводненности) ARR_MULT_IP ARR_PERF ARR_OWC NNC
 '''
 
-
 from math import sqrt
-#MODEL_OWC = {'1': '1494.0','2': '1486.5', '3': '1486.5'}
-#MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
-#MODEL_ZONE = {'1','2','3'}
+MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
 MAIN = {'100', '101', '10106', '10107', '11700', '11701', '11919', '11920', '11921', '11921D', '11979', '11980', '11981', '11982', '11983', '11984', '11985', '11986', '11987', '11988', '12042', '12043', '12044', '12045', '12233', '12234', '12235', '12236', '12237', '12238', '12239', '12240', '12241', '12242', '13401', '13402', '13403', '13404', '13405', '13406', '13407', '13408', '13409', '13410', '13411', '13412', '13413', '13414', '13415', '13416', '13417', '13418', '13419', '13420', '13421', '13422', '13423', '13424', '13425', '13426', '13427', '13427D', '13428', '13429', '13430', '13431', '13432', '13433', '13434', '13435', '13436', '13437', '13438', '13439', '13440', '13441', '13442', '13444', '13445', '13446', '13448', '13449', '13450', '13451', '13452', '13453', '13454', '13455', '13456', '13457', '13458', '13458D', '13459', '13460', '13461', '13462', '13463', '13464', '13465', '13466', '13467', '13468', '13469', '13470', '13471', '13472', '13473', '13474', '13475', '13476', '13477', '13478', '13479', '13480', '13481', '13483', '13484', '13485', '13486', '13487', '13488', '13489', '13490', '13491', '13492', '13493', '13494', '13495', '13496', '13497', '13498', '13499', '13501', '13503', '13504', '13506', '13507', '13508', '13509', '13510', '13511', '13512', '13513', '13514', '13515', '13516', '13518', '13519', '13520', '13521', '13522', '13523', '13524', '13525', '13526', '13527', '13528', '13529', '13530', '13531', '13532', '13533', '13534', '13535', '13536', '13537', '13538', '13539', '13540', '13541', '13542', '13543', '13544', '13545', '13546', '13547', '13548', '13549', '13550', '13551', '13552', '13553', '13554', '13555', '13556', '13557', '13558', '13559', '13560', '13561', '13563', '13564', '13565', '13566', '13567', '13568', '13569', '13570', '13572', '13573', '13574', '13575', '13576', '13577', '13578', '13579', '13580', '13581', '13582', '13583', '13584', '13585', '13586', '13588', '13589', '13590', '13591', '13592', '13593', '13594', '13595', '13596', '13597', '13598', '13599', '13600', '15113', '15113D', '15114', '16304', '16336', '16482', '16526', '16529', '16530', '16537', '16539', '16540', '16541', '16544', '16547', '17419', '17483', '21292', '21440', '21493', '21502', '21503', '21504', '21505', '21506', '21507', '21508', '21509', '21510', '21511', '21512', '21513', '21514', '21515', '21516', '21517', '21519', '21520', '21521', '21522', '21523', '21524', '21525', '21526', '21527', '21528', '21529', '21530', '21531', '21532', '21533', '21535', '21536', '21537', '21538', '21539', '21540', '21541', '21542', '21543', '21544', '21545', '21546', '21547', '21548', '21550', '21551', '21552', '21553', '21555', '21556', '21557', '21558', '21559', '21560', '21561', '21562', '21563', '21564', '21565', '21566', '21567', '21568', '21569', '21570', '21571', '21572', '21573', '21575', '21576', '21577', '21578', '21579', '21580', '21581', '21582', '21583', '21584', '21587', '21588', '21589', '21590', '21591', '21592', '21593', '21594', '21595', '21596', '21598', '21599', '21600', '21601', '21602', '21603', '21604', '21607', '21608', '21611', '21612', '21614', '21615', '21616', '21617', '21618', '21619', '21620', '21621', '21622', '21625', '21626', '21627', '21629', '21630', '21632', '21633', '21634', '21635', '21636', '21637', '21638', '21640', '21641', '21642', '21643', '21645', '21646', '21647', '21648', '21650', '21651', '21652', '21653', '21654', '21655', '21656', '21658', '21659', '21660', '21661', '21662', '21663', '21664', '21665', '21666', '21667', '21668', '21671', '21672', '21673', '21674', '21675', '21678', '21679', '21680', '21681', '21682', '21683', '21684', '21684A', '21685', '21686', '21687', '21688', '21689', '21691', '21692', '21694', '21696', '21697', '21698', '21699', '21700', '21701', '21702', '21703', '21704', '21705', '21706', '21707', '21708', '21710', '21711', '21712', '21713', '21714', '21715', '21716', '21717', '21718', '21719', '21720', '21721', '21724', '21725', '21726', '21727', '21731', '21732', '21733', '21734', '21735', '21736', '21738', '21740', '21741', '21742', '21743', '21744', '21745', '21746', '21747', '21748', '21750', '21751', '21753', '21755', '21757', '21758', '21759', '21760', '21761', '21762', '21763', '21764', '21765', '21766', '21767', '21768', '21769', '21771', '21772', '21773', '21774', '21775', '21776', '21777', '21778', '21779', '21780', '21781', '21782', '21783', '21784', '21785', '21786', '21787', '21789', '21790', '21791', '21793', '21794', '21796', '21798', '21799', '21800', '25283', '25284', '25285', '25286', '25287', '25288', '25289', '25290', '25293', '25294', '25297', '25298', '25299', '25300', '27303', '27305', '27310', '27315', '27385', '27395', '27481', '27483', '27484', '27487', '32801', '32804', '32805', '32806', '32810', '32813', '32814', '32816', '32817', '32818', '32819', '32820', '32821', '32826', '32827', '32830', '32835', '32836', '32842', '32843', '32844', '32845', '32846', '32854', '32863', '32866', '32868', '32869', '32874', '32875', '32876', '32877', '32878', '32881', '32882', '32883', '32884', '32885', '32886', '32887', '32888', '32889', '32890', '32892', '32893', '32894', '32895', '32896', '32898', '32907', '32910', '32914', '32916', '32917', '32918', '32919', '32920', '32921', '32922', '32923', '32924', '32925', '32929', '32930', '32931', '32940', '32941', '32943', '32947', '32948', '32950', '32954', '32955', '32956', '32957', '32958', '32959', '32960', '3498', '3515', '3516', '3517', '3556', '3557', '3558', '3597', '48', '48D', '49', '5042', '51', '527', '53', '530', '54', '570', '571', '5712', '5713', '5714', '5715', '5716', '5717', '5718', '5719', '5719D', '572', '5720', '5721', '5722', '5722A', '5723', '5724', '5725', '5725A', '5726', '5727', '5728', '5728A', '5729', '5730', '5731', '5731A', '5732', '5733', '5734', '5735', '5736', '5737', '5738', '5739', '5740', '5741', '5741D', '5742', '5743', '5744', '5745', '5746', '5747', '5748', '5749', '5750', '5751', '58', '5801', '5802', '5803', '5804', '5805', '5806', '5806D', '5807', '5807D', '5808', '5809', '5810', '5811', '5811D', '5812', '5813', '5814', '5815', '5815D', '5816', '5816D', '5817', '5818', '5819', '5820', '5821', '5822', '5823', '5824', '5825', '5826', '5827', '5827D', '5828', '5829', '5830', '5831', '5832', '5833', '5834', '5835', '5836', '5837', '5838', '5839', '5840', '5840D', '5841', '5842', '5843', '5844', '5845', '5846', '5847', '5848', '5849', '5850', '5851', '5852', '5853', '5854', '5855', '5856', '5857', '5858', '5859', '5860', '5861', '5862', '5863', '5864', '5864D', '5865', '5865D', '5866', '5867', '5868', '5869', '5870', '5871', '5872', '5873', '5873D', '5874', '5875', '5876', '5877', '5878', '5879', '5880', '5881', '5882', '5883', '5884', '5884D', '5885', '5886', '5887', '5888', '5890', '5891', '5892', '5893', '5894', '5895', '5896', '5897', '5897D', '5898', '5899', '5900', '5901', '5902', '5902D', '5903', '5904', '5905', '5906', '5906D', '5907', '5907D', '5908', '5909', '5909D', '5910', '5911', '5912', '5913', '5913A', '5914', '5915', '5916', '5917', '5918', '5919', '5920', '5921', '5922', '5923', '5924', '5925', '5926', '5927', '5927D', '5928', '5928D', '5929', '5929D', '5930', '5930D', '5931', '5932', '5933', '5934', '5935', '5936', '5937', '5938', '5939', '5940', '5940D', '5941', '5941D', '5942', '5943', '5944', '5945', '5946', '5947', '5947D', '5948', '5949', '5950', '5951', '5952', '5953', '5954', '5955', '5955D', '5956', '5956D', '5957', '5958', '5959', '5960', '5961', '5962', '5963', '5964', '5965', '5966', '5967', '5968', '5969', '5970', '5971', '5972', '5973', '5974', '5975', '5976', '5977', '5978', '5979', '5980', '5981', '5982', '5983', '5984', '5985', '5986', '5987', '5988', '5991', '5992', '5993', '5994', '5995', '5996', '5997', '5998', '5999', '651', '652', '653', '7400', '7401', '7402', '77D', '8000', '8001', '8002', '8002D', '8003', '8004', '8005', '8006', '8007', '8008', '8008D', '8009', '8010', '8011', '8012', '8013', '8014', '8015', '8016', '8017', '8018', '8019', '8020', '8021', '8021D', '8022', '8022D', '8023', '8024', '8025', '8026', '8027', '8028', '8029', '8030', '8031', '8032', '8033', '8034', '8035', '8036', '8037', '8038', '8039', '8040', '8041', '8042', '8043', '8044', '8045', '8046', '8047', '8048', '8049', '8050', '8051', '8052', '8053', '8053B', '8054', '8055', '8056', '8057', '8058', '8059', '8060', '8061', '8062', '8063', '8064', '8065', '8066', '8067', '8068', '8069', '8070', '8071', '8072', '8073', '8074', '8075', '8076', '8077', '8078', '8079', '8080', '8081', '8081D', '8082', '8083', '8084', '8085', '8086', '8087', '8088', '8089', '8090', '8091', '8092', '8093', '8094', '8094D', '8095', '8096', '8097', '8098', '8099', '8100', '8101', '8102', '8103', '8104', '8106', '8107', '8108', '8109', '8110', '8111', '8112A', '8113', '8114', '8115', '8116', '8117', '8118', '8119', '8120', '8121', '8122', '8123', '8124', '8125', '8127', '8128', '8129', '8131', '8132', '8133', '8134', '8135', '8136', '8137', '8138', '8139', '8140', '8141', '8141D', '8142', '8143', '8144', '8145', '8146', '8147', '8148A', '8149', '8150', '8151', '8152', '8153', '8154', '8155', '8156', '8157', '8158', '8159', '8160', '8161', '8162', '8162D', '8163', '8164', '8165', '8166', '8167', '8168', '8168D', '8169', '8170', '8171', '8172', '8173', '8174', '8175', '8176', '8177', '8178', '8179', '8180', '8181', '8182', '8183', '8184', '8185', '8186', '8187', '8188', '8189', '8190', '8191', '8192', '8193', '8194', '8195', '8196', '8197', '8198', '8198D', '8199', '8200', '84', '84D'}
 NEGERMET = {'84', '8199', '8197', '8195', '8191', '8190', '8187', '8171', '8169', '8168', '8165', '8164', '8161', '8159', '8158', '8156', '8152', '8150', '8148A', '8147', '8144', '8137', '8136', '8133', '8124', '8123', '8122', '8116', '8112A', '8110', '8109', '8092', '8090', '8088', '8084', '8076', '8074', '8072', '8067', '8064', '8060', '8058', '8057', '8056', '8052', '8050', '8049', '8048', '8046', '8045', '8043', '8037', '8036', '8032', '8027', '8024', '8018', '8017', '8016', '8013', '8012', '8010', '8009', '8008', '8005', '77D', '6805', '675', '6712', '6601', '652', '651', '65', '5995', '5992', '5991', '5985', '5983', '5982', '5981', '5980', '5979', '5978', '5976', '5972', '5971', '5967', '5966', '5965', '5964', '5959', '5958', '5956D', '5956', '5954', '5952', '5951', '5950', '5949', '5946', '5943', '5939', '5936', '5929D', '5927', '5925', '5924', '5915', '5913A', '5910', '5906D', '5903', '5901', '5893', '5886', '5881', '5878', '5876', '5872', '5870', '5868', '5867', '5865D', '5865', '5864', '5863', '5862', '5858', '5857', '5853', '5851', '5850', '5846', '5845', '5844', '5843', '5840', '5838', '5836', '5832', '5830', '5825', '5823', '5821', '5820', '5818', '5816', '5815D', '5815', '5812', '5811', '5809', '5807D', '5805', '5804', '5758', '5757', '5752', '5751', '5749', '5745', '5743', '5739', '5737', '5736', '5734', '5733', '5731', '5729', '5728', '5726', '5725A', '5725', '5724', '5722', '572', '5719D', '5718', '5717', '5716', '5713', '5712', '5711', '5710', '571', '5709', '5708', '5694', '5693', '5692', '5691', '5687', '5433', '5432', '530', '51', '3597', '3517', '3515', '32898', '32881', '32878', '32520', '27395', '25288', '22126', '22125', '22123', '22112', '21913', '21856', '21848', '21814', '21811', '21794', '21781', '21778', '21774', '21767', '21765', '21751', '21726', '21716', '21705', '21680', '21675', '21656', '21652', '21648', '21646', '21645', '21636', '21635', '21617', '21593', '21592', '21590', '21575', '21566', '21560', '21555', '21553', '21542', '21529', '21527', '21523', '21519', '21514', '21440', '21439', '21433', '21429', '21427', '21424D', '21424', '21381', '21380', '21317', '21259', '21256', '21252', '21222', '21208', '21193', '21191', '17483', '17472', '17427', '17406', '16547', '16541', '15113', '14789', '14787', '14786', '14782', '14779', '14713', '14711', '14705', '13597', '13595', '13585', '13577', '13573', '13561', '13556', '13552', '13550', '13536', '13534', '13530', '13529', '13528', '13524', '13522', '13513', '13512', '13509', '13499', '13495', '13493', '13492', '13489', '13485', '13484', '13473', '13472', '13468', '13462', '13461', '13459', '13454', '13453', '13442', '13436', '13434', '13433', '13432', '13431', '13425', '13423', '13422', '13420', '13419', '13418', '13416', '13415', '13410', '13404', '13403', '13351', '13330', '12396', '12395', '12245', '12244', '12237', '11988', '11920', '11804D', '11756', '11303A', '11301', '11298', '10120', '10115'}
 
-max_mult = 4
+max_mult_ip = 5
 max_mult_perf = 2
+arr_perf_dif = 0.2
+rop_mult = 5
 max_OWC = 1
 wells_number = 50 
 min_oil_prod = 10000
-OWC_1 = 1494.0
-OWC_2 = 1486.5
-OWC_3 = 1486.5
-zone1 = set([i for i in range(1,16)])
-zone2 = set([i for i in range(18,49)])
-zone3 = set([i for i in range(51,180)])
-dict_well_trac_A=open(get_project_folder()+'/skript/dict/dict_well_trac_A.txt','r')
+OWC = {'1':1494.0,'2':1486.5,'3':1486.5}
+
 dict_well_trac_RP=open(get_project_folder()+'/skript/dict/dict_well_trac_RP.txt','r')
 dict_well_ROP = open(get_project_folder()+'/skript/dict/dict_well_ROP.txt','r')
 dict_well_picks = open(get_project_folder()+'/skript/dict/dict_well_picks.txt','r')
 dict_well_picks_reverse = open(get_project_folder()+'/skript/dict/dict_well_picks_reverse.txt','r')
-dict_well_perf = open(get_project_folder()+'/skript/dict/dict_well_perf.txt','r')
+dict_well_perf_prod = open(get_project_folder()+'/skript/dict/dict_well_perf_prod.txt','r')
+dict_well_perf_inj = open(get_project_folder()+'/skript/dict/dict_well_perf_inj.txt','r')
+
 arr_mult_file = open(get_project_folder()+'/skript/ARR_MULT_IP.txt','w')
 OWC_file = open(get_project_folder()+'/skript/data/OWC.txt','r')
 arr_OWC = open(get_project_folder()+'/skript/ARR_OWC.txt','w')
@@ -509,20 +535,18 @@ arr_perf = open(get_project_folder()+'/skript/ARR_PERF.txt','w')
 arr_perf_dict_file = open(get_project_folder()+'/skript/dict/arr_perf_dict.txt','w')
 arr_mult_ip_dict_file = open(get_project_folder()+'/skript/dict/arr_mult_ip_dict.txt','w')
 
-well_trac_A = eval(dict_well_trac_A.read())
 well_trac_RP = eval(dict_well_trac_RP.read())
-
 well_ROP = eval(dict_well_ROP.read())
 well_picks = eval(dict_well_picks.read())
 well_picks_reverse = eval(dict_well_picks_reverse.read())
-well_perf = eval(dict_well_perf.read())
+well_perf_prod = eval(dict_well_perf_prod.read())
+well_perf_inj = eval(dict_well_perf_inj.read())
 well_WC_interval = eval(dict_well_WC_interval.read())
 content = OWC_file.readlines()
 content_matrix = [[content[i].split('\t')[j] for j in range(len(content[i].split('\t')))] for i in range(len(content))] 
 OWC_dict = dict()
 arr_perf_dict = dict()
 arr_mult_ip_dict = dict()
-#print(content_matrix[0][0],content_matrix[0][1],content_matrix[0][2],content_matrix[0][3],content_matrix[0][4],content_matrix[0][5],content_matrix[0][6])
 for i in range(len(content)):
     OWC_dict[content_matrix[i][0]] = content_matrix[i][1]+'\t'+content_matrix[i][2]+'\t'+content_matrix[i][3]+'\t'+content_matrix[i][4]+'\t'+content_matrix[i][5]+'\t'+content_matrix[i][6]
 
@@ -546,291 +570,162 @@ sorted_dict = sorted(prod_adapt)
 for i in sorted_dict[-1:-1*wells_number-1:-1]:
     prod_adapt_set.add(prod_adapt[i])
 
-def get_key(value):
-    for k, v in well_tracer.items():
-        if v == value:
-            return k
+#dict_well_Press_zones_file = dict()
+dict_well_ROP_zones_file = dict()
+#dict_well_Press_zones = dict()
+dict_well_ROP_zones = dict()
+for k in MODEL_CELLS.keys():
+#    dict_well_Press_zones_file[k] = open(get_project_folder()+'/skript/dict/dict_well_Press_zone_'+k+'.txt','r') 
+    dict_well_ROP_zones_file[k] = open(get_project_folder()+'/skript/dict/dict_well_ROP_zone_'+k+'.txt','r')
+#    dict_well_Press_zones[k] = eval(dict_well_Press_zones_file[k].read())
+    dict_well_ROP_zones[k] = eval(dict_well_ROP_zones_file[k].read())
+        
+def ZONES(w_p):
+    if len(well_perf_prod[w_p]) >= 2:
+        for k in MODEL_CELLS.keys():
+            try:
+                print('ОТНОШЕНИЕ_НАКОПЛЕННОЙ_ДОБЫЧИ_НЕФТИ_РАСЧЕТ/ИСТОРИЯ_НА ГОРИЗОНТ: '+k,dict_well_ROP_zones[k][w_p],sep='\t')
+            except KeyError:
+                pass
+#            try:
+#                print('ДАВЛЕНИЕ_ЗА_ПЕРИОД_РАБОТЫ_НА_ГОРИЗОНТ: '+k,dict_well_Press_zones[k][w_p],sep='\t')
+#            except KeyError:
+#                pass
 
-def arr_mult(w_i,w_p):
-    well_inj_perf = set(well_perf[w_i])
-    well_prod_perf = set(well_perf[w_p])
+def ARR_MULT_IP(w_i,w_p):
+    well_inj_perf = set(well_perf_inj[w_i])
+    well_prod_perf = set(well_perf_prod[w_p])
     zone_i = well_inj_perf & well_prod_perf
-#    if float(well_WC[well_prod]) >= 1 and dolya_zak != 1:                          #ИСТОРИЯ ДОБЫЧИ ПО НЕФТИ БОЛЬШЕ РАСЧЕТА
-#        mult = float(well_WC[w.name])/(1-dolya_zak)                                #НЕОБХОДИМО УВЕЛИЧИТЬ МУЛЬТ В ТОЧКЕ СКВАЖИНА ТРАССЕР
-#    else:                                                                          #ИСТОРИЯ ДОБЫЧИ ПО НЕФТИ МЕНЬШЕ РАСЧЕТА
-#        mult = float(well_WC[w.name])*(1-dolya_zak)                                #НЕОБХОДИМО УМЕНЬШИТЬ МУЛЬТ В ТОЧКЕ СКВАЖИНА ТРАССЕР
-    if float(well_ROP[well_prod]) >= 1 and dolya_zak != 1:                          #ИСТОРИЯ ДОБЫЧИ ПО НЕФТИ БОЛЬШЕ РАСЧЕТА
-        mult = float(well_ROP[w.name])**2/(1-dolya_zak)                             #НЕОБХОДИМО УВЕЛИЧИТЬ МУЛЬТ В ТОЧКЕ СКВАЖИНА ТРАССЕР
-    else:                                                                           #ИСТОРИЯ ДОБЫЧИ ПО НЕФТИ МЕНЬШЕ РАСЧЕТА
-        mult = float(well_ROP[w.name])**2*(1-dolya_zak)                             #НЕОБХОДИМО УМЕНЬШИТЬ МУЛЬТ В ТОЧКЕ СКВАЖИНА ТРАССЕР
+    rop = float(well_ROP[well_prod])
+    if rop > rop_mult:
+        rop = rop_mult
+    elif rop < 1/rop_mult:
+        rop = 1/rop_mult
+#    print('dif_oil_prod_len',sqrt(dif_oil_prod_len))
+#    print('rop',sqrt(rop))
+#    print('tracer',(1+dolya_zak))
+    WC_min = dict()
+    for i in well_prod_perf:
+        WC_min[i] = float(well_WC_interval[well_prod].split(' ')[int(i)-1])
     if str(x)+' '+str(y) == well_picks[well_prod]:       
-        print('--ARR_MULT',mult,x,y,'/--',w.name,sep='\t')
-        print('--ARR_MULT',mult,x,y,'/--',w.name,sep='\t',file=arr_mult_file)
-        print('--ARR_MULT',mult,x,y,'/--',w.name,sep='\t',file=reason)
-    else:
-        if mult > max_mult:
-            mult = max_mult
-        if mult < 1/max_mult:
-            mult = 1/max_mult
-        if zone_i & {'1'} != set():
-#            if float(well_WC[well_prod]) >= 1:
-            if float(well_ROP[well_prod]) >= 1:
-                mult_i = 1/sqrt(1.1-float(well_WC_interval[well_prod].split(' ')[0]))
-            else:
-                mult_i = sqrt(1.1-float(well_WC_interval[well_prod].split(' ')[0]))
-#            print(mult_i)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone1),max(zone1),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=arr_mult_file)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone1),max(zone1),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=reason)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone1),max(zone1),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t')
-            arr_mult_ip_dict[w.name+' '+str(min(zone1))+','+str(max(zone1))] = round(sqrt(mult*mult_i),3)
-        if zone_i & {'2'} != set():
-#            if float(well_WC[well_prod]) >= 1:
-            if float(well_ROP[well_prod]) >= 1:
-                mult_i = 1/sqrt(1.1-float(well_WC_interval[well_prod].split(' ')[1]))
-            else:
-                mult_i = sqrt(1.1-float(well_WC_interval[well_prod].split(' ')[1]))
-#            print(mult_i)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone2),max(zone2),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=arr_mult_file)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone2),max(zone2),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=reason)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone2),max(zone2),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t')
-            arr_mult_ip_dict[w.name+' '+str(min(zone2))+','+str(max(zone2))] = round(sqrt(mult*mult_i),3)
-        if zone_i & {'3'} != set():
-#            if float(well_WC[well_prod]) >= 1:
-            if float(well_ROP[well_prod]) >= 1:
-                mult_i = 1/sqrt(1.1-float(well_WC_interval[well_prod].split(' ')[2]))
-            else:
-                mult_i = sqrt(1.1-float(well_WC_interval[well_prod].split(' ')[2]))
-#            print(mult_i)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone3),max(zone3),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=arr_mult_file)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone3),max(zone3),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=reason)
-            print('ARR_MULT',round(sqrt(mult*mult_i),3),x,x,y,y,min(zone3),max(zone3),'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t')  
-            arr_mult_ip_dict[w.name+' '+str(min(zone3))+','+str(max(zone3))] = round(sqrt(mult*mult_i),3)
-            
-            
-def perf_mult(w_p):
+        print('--ARR_MULT',x,y,'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t')
+        print('--ARR_MULT',x,y,'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=arr_mult_file)
+        print('--ARR_MULT',x,y,'/-- '+str(w_p)+' - '+str(w_i)+' ДОЛЯ ВОДЫ '+str(round(dolya_zak,2)),sep='\t',file=reason)    
+    for k,v in MODEL_CELLS.items():
+        if set(k) & zone_i != set():
+            WC = float(well_WC_interval[well_prod].split(' ')[int(k)-1])
+#            print('wc_interval',(WC+1-min(WC_min.values())))
+            k1 = v.split(',')[0]
+            k2 = v.split(',')[1]
+            mult = (dif_oil_prod_len)*float(rop)*(1+dolya_zak)**2*(WC+1-min(WC_min.values()))**2
+            mult = sqrt(mult)
+            if mult > max_mult_ip:
+                mult = max_mult_ip         
+            if float(well_ROP[well_prod]) < 1:
+                mult = 1/mult     
+            mult = round(mult,2)
+            print('ARR_MULT',mult,x,x,y,y,k1,k2,'/-- {} - {} ({},{},{},{})'.format(w_p,w_i,round(dolya_zak,2),dif_oil_prod_len,WC+1-min(WC_min.values()),rop),sep='\t',file=arr_mult_file)
+            print('ARR_MULT',mult,x,x,y,y,k1,k2,'/-- {} - {} ({},{},{},{})'.format(w_p,w_i,round(dolya_zak,2),dif_oil_prod_len,WC+1-min(WC_min.values()),rop),sep='\t',file=reason)
+            print('ARR_MULT',mult,x,x,y,y,k1,k2,'/-- {} - {} ({},{},{},{})'.format(w_p,w_i,round(dolya_zak,2),dif_oil_prod_len,WC+1-min(WC_min.values()),rop),sep='\t')
+            arr_mult_ip_dict[w.name+' '+str(k1)+','+str(k2)] = mult        
+                  
+def ARR_PERF(w_p):
     x_well = well_picks[str(w_p)].split(' ')[0]
-    y_well = well_picks[str(w_p)].split(' ')[1]
-    if len(well_perf[w_p]) >= 2:
-#        arr_perf_mult = float(well_WC[w_p])
+    y_well = well_picks[str(w_p)].split(' ')[1]    
+    if len(well_perf_prod[w_p]) >= 2:
+        WC = dict()
         arr_perf_mult = float(well_ROP[w_p])
         if arr_perf_mult > max_mult_perf:
             arr_perf_mult = max_mult_perf
         elif arr_perf_mult < 1/max_mult_perf:
             arr_perf_mult = 1/max_mult_perf
-        if set(well_perf[w_p]) & {'1'} != set():
-            WC1 = float(well_WC_interval[w_p].split(' ')[0])
-        else:
-            WC1 = 100
-        if set(well_perf[w_p]) & {'2'} != set():
-            WC2 = float(well_WC_interval[w_p].split(' ')[1])
-        else:
-            WC2 = 100
-        if set(well_perf[w_p]) & {'3'} != set():
-            WC3 = float(well_WC_interval[w_p].split(' ')[2])
-        else:
-            WC3 = 100
-#        print(float(well_WC_interval[w_p].split(' ')[0]),float(well_WC_interval[w_p].split(' ')[1]),float(well_WC_interval[w_p].split(' ')[2]))
-        max_zone = max(float(well_WC_interval[w_p].split(' ')[0]),float(well_WC_interval[w_p].split(' ')[1]),float(well_WC_interval[w_p].split(' ')[2]))
-        min_zone = min(WC1,WC2,WC3)
-#        print(max_zone,min_zone,WC1,WC2,WC3,well_WC_interval[w_p])
-        if set(well_perf[w_p]) & {'1'} != set():
-            if float(well_WC_interval[w_p].split(' ')[0]) == max_zone:
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t')
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t',file=arr_perf)
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t',file=reason)
-                arr_perf_dict[w.name+' '+str(min(zone1))+','+str(max(zone1))] = arr_perf_mult
-            if float(well_WC_interval[w_p].split(' ')[0]) == min_zone:
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t')
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t',file=arr_perf)
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t',file=reason)
-                arr_perf_dict[w.name+' '+str(min(zone1))+','+str(max(zone1))] = round(1/arr_perf_mult,3)
-        if set(well_perf[well_prod]) & {'2'} != set():
-            if float(well_WC_interval[w_p].split(' ')[1]) == max_zone:
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t') 
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t',file=arr_perf)
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t',file=reason)
-                arr_perf_dict[w.name+' '+str(min(zone2))+','+str(max(zone2))] = arr_perf_mult
-            if float(well_WC_interval[w_p].split(' ')[1]) == min_zone:
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t')   
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t',file=arr_perf) 
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t',file=reason) 
-                arr_perf_dict[w.name+' '+str(min(zone2))+','+str(max(zone2))] = round(1/arr_perf_mult,3)
-        if set(well_perf[w_p]) & {'3'} != set():
-            if float(well_WC_interval[w_p].split(' ')[2]) == max_zone:
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t')    
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t',file=arr_perf)   
-                print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_zone),sep='\t',file=reason)   
-                arr_perf_dict[w.name+' '+str(min(zone3))+','+str(max(zone3))] = arr_perf_mult
-            if float(well_WC_interval[w_p].split(' ')[2]) == min_zone:
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t')
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t',file=arr_perf)
-                print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_zone),sep='\t',file=reason)
-                arr_perf_dict[w.name+' '+str(min(zone3))+','+str(max(zone3))] = round(1/arr_perf_mult,3)
+        for k,v in MODEL_CELLS.items():
+            if set(well_perf_prod[w_p]) & set(k) != set():
+                WC[k] = float(well_WC_interval[w_p].split(' ')[int(k)-1])
+                if WC[k] == min(WC.values()):
+                    min_zone = k
+            else:
+                WC[k] = 100
+        max_value = max([float(i) for i in well_WC_interval[w_p].split(' ')])
+        min_value = min(WC.values())
+        max_zone = well_WC_interval[w_p].split(' ').index(str(max_value)) + 1
         
-def OWC(w_p):
-    well_prod_perf = set(well_perf[w_p])
-    x_well = int(well_picks[str(well_prod)].split(' ')[0])
-    y_well = int(well_picks[str(well_prod)].split(' ')[1])
-    k_OWC = 1-float(well_trac_RP[well_prod])
-    
-    if well_prod_perf & {'1'} != set():
-        try:
-            OWC_top = round(float(OWC_dict[str(w.name)].split('\t')[0]),1)
-        except:
-            OWC_top = OWC_dict[str(w.name)].split('\t')[0]
-        try:
-            OWC_bot = round(float(OWC_dict[str(w.name)].split('\t')[1]),1)
-        except:
-            OWC_bot = OWC_dict[str(w.name)].split('\t')[1]
-#        if float(well_WC[w.name]) < 1:     
-        if float(well_ROP[w.name]) < 1:                                                    #Опускаем ВНК
-            if OWC_bot != '-' and OWC_top != '-':
-                OWC_value = round((OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
-            elif OWC_bot != '-' and OWC_top == '-' and OWC_1 < OWC_bot:
-                OWC_value = round(min(OWC_1 + (OWC_bot - OWC_1)*k_OWC,OWC_bot),1)
-            elif OWC_bot != '-' and OWC_top == '-' and OWC_1 >= OWC_bot:
-                OWC_value = 'skip'
-            elif OWC_bot == '-' and OWC_top != '-':
-                OWC_value = round(min(OWC_1,OWC_top)+max_OWC*k_OWC,1)
-            else:
-                OWC_value = '-'
-            if OWC_value == '-' or OWC_value == 'skip':
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)       
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)  
-            else:
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
-#        elif float(well_WC[w.name]) > 1:     
-        elif float(well_ROP[w.name]) > 1:                                                   #Поднимаем ВНК
-            if OWC_bot != '-' and OWC_top != '-':
-                OWC_value = round(-(OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
-            elif OWC_bot != '-' and OWC_top == '-':
-                OWC_value = round(max(OWC_1,OWC_bot)-max_OWC*k_OWC,1)
-            elif OWC_bot == '-' and OWC_top != '-' and OWC_1 > OWC_top:
-                OWC_value = round(max(OWC_1 - (-OWC_top + OWC_1)*k_OWC,OWC_top),1)  
-            elif OWC_bot == '-' and OWC_top != '-' and OWC_1 <= OWC_top:
-                OWC_value = 'skip'
-            else:
-                OWC_value = '-'
-            if OWC_value == '-' or OWC_value == 'skip':
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)       
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason) 
-            else:
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)  
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_1)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
-        else:
-            pass 
-            
-    if well_prod_perf & {'2'} != set():
-        try:
-            OWC_top = round(float(OWC_dict[str(w.name)].split('\t')[2]),1)
-        except:
-            OWC_top = OWC_dict[str(w.name)].split('\t')[2]
-        try:
-            OWC_bot = round(float(OWC_dict[str(w.name)].split('\t')[3]),1)
-        except:
-            OWC_bot = OWC_dict[str(w.name)].split('\t')[3]
-#        if float(well_WC[w.name]) < 1:     
-        if float(well_ROP[w.name]) < 1:                                                    #Опускаем ВНК
-            if OWC_bot != '-' and OWC_top != '-':
-                OWC_value = round((OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
-            elif OWC_bot != '-' and OWC_top == '-' and OWC_2 < OWC_bot:
-                OWC_value = round(min(OWC_2 + (OWC_bot - OWC_2)*k_OWC,OWC_bot),1)
-            elif OWC_bot != '-' and OWC_top == '-' and OWC_2 >= OWC_bot:
-                OWC_value = 'skip'
-            elif OWC_bot == '-' and OWC_top != '-':
-                OWC_value = round(min(OWC_2,OWC_top)+max_OWC*k_OWC,1)
-            else:
-                OWC_value = '-'
-            if OWC_value == '-' or OWC_value == 'skip':
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
-            else:
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
-#        elif float(well_WC[w.name]) > 1:     
-        elif float(well_ROP[w.name]) > 1:                                               #Поднимаем ВНК
-            if OWC_bot != '-' and OWC_top != '-':
-                OWC_value = round(-(OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
-            elif OWC_bot != '-' and OWC_top == '-':
-                OWC_value = round(max(OWC_2,OWC_bot)-max_OWC*k_OWC,1)
-            elif OWC_bot == '-' and OWC_top != '-' and OWC_2 > OWC_top:
-                OWC_value = round(max(OWC_2 - (-OWC_top + OWC_2)*k_OWC,OWC_top),1)   
-            elif OWC_bot == '-' and OWC_top != '-' and OWC_2 <= OWC_top:
-                OWC_value = 'skip'
-            else:
-                OWC_value = '-'
-            if OWC_value == '-' or OWC_value == 'skip':
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)  
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
-            else:
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)     
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone2),max(zone2),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_2)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)  
-        else:
-            pass 
+        for k,v in MODEL_CELLS.items():
+            if set(well_perf_prod[w_p]) & set(k) != set() and (max_value - min_value) > arr_perf_dif:
+                k1 = v.split(',')[0]
+                k2 = v.split(',')[1]                
+                if k == str(max_zone):
+                    print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_value),sep='\t')
+                    print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_value),sep='\t',file=arr_perf)
+                    print('ARR_PERF',arr_perf_mult,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' САМЫЙ ВЫСОКООБВОДНЕННЫЙ ПЛАСТ '+str(max_value),sep='\t',file=reason)
+                    arr_perf_dict[w.name+' '+str(k1)+','+str(k2)] = arr_perf_mult
+                if k == min_zone:
+                    print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_value),sep='\t')
+                    print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_value),sep='\t',file=arr_perf)
+                    print('ARR_PERF',round(1/arr_perf_mult,3),x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' САМЫЙ НИЗКООБВОДНЕННЫЙ ПЛАСТ '+str(min_value),sep='\t',file=reason)
+                    arr_perf_dict[w.name+' '+str(k1)+','+str(k2)] = round(1/arr_perf_mult,3)
 
-    if well_prod_perf & {'3'} != set():
-        try:
-            OWC_top = round(float(OWC_dict[str(w.name)].split('\t')[4]),1)
-        except:
-            OWC_top = OWC_dict[str(w.name)].split('\t')[4]
-        try:
-            OWC_bot = round(float(OWC_dict[str(w.name)].split('\t')[5]),1)
-        except:
-            OWC_bot = OWC_dict[str(w.name)].split('\t')[5]
-#        if float(well_WC[w.name]) < 1:                               
-        if float(well_ROP[w.name]) < 1:                                #Опускаем ВНК
-            if OWC_bot != '-\n' and OWC_top != '-':
-                OWC_value = round((OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
-            elif OWC_bot != '-\n' and OWC_top == '-' and OWC_3 < OWC_bot:
-                OWC_value = round(min(OWC_3 + (OWC_bot - OWC_3)*k_OWC,OWC_bot),1)
-            elif OWC_bot != '-\n' and OWC_top == '-' and OWC_3 >= OWC_bot:
-                OWC_value = 'skip'
-            elif OWC_bot == '-\n' and OWC_top != '-':
-                OWC_value = round(min(OWC_3,OWC_top)+max_OWC*k_OWC,1)
+
+def ARR_OWC(w_p):
+    well_prod_perf = set(well_perf_prod[w_p])
+    x_well = int(well_picks[str(w_p)].split(' ')[0])
+    y_well = int(well_picks[str(w_p)].split(' ')[1])
+    k_OWC = 1-float(well_trac_RP[w_p])   
+    for k,v in MODEL_CELLS.items():
+        if well_prod_perf & set(k) != set():
+            try:
+                OWC_top = round(float(OWC_dict[str(w_p)].split('\t')[(int(k)-1)*2]),1)
+            except:
+                OWC_top = OWC_dict[str(w_p)].split('\t')[(int(k)-1)*2]
+            try:
+                OWC_bot = round(float(OWC_dict[str(w_p)].split('\t')[(int(k)-1)*2+1].strip()),1)
+            except:
+                OWC_bot = OWC_dict[str(w_p)].split('\t')[(int(k)-1)*2+1].strip()
+
+            k1 = v.split(',')[0]
+            k2 = v.split(',')[1]     
+             
+            if float(well_ROP[w_p]) < 1:                                                    #Опускаем ВНК
+                if OWC_bot != '-' and OWC_top != '-':
+                    OWC_value = round((OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
+                elif OWC_bot != '-' and OWC_top == '-' and OWC[k] < OWC_bot:
+                    OWC_value = round(min(OWC[k] + (OWC_bot - OWC[k])*k_OWC,OWC_bot),1)
+                elif OWC_bot != '-' and OWC_top == '-' and OWC[k] >= OWC_bot:
+                    OWC_value = 'skip'
+                elif OWC_bot == '-' and OWC_top != '-':
+                    OWC_value = round(min(OWC[k],OWC_top)+max_OWC*k_OWC,1)
+                else:
+                    OWC_value = '-'
+                if OWC_value == '-' or OWC_value == 'skip':
+                    print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ОПУСКАЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
+                    print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ОПУСКАЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)       
+                    print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ОПУСКАЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)  
+                else:
+                    print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ОПУСКАЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
+                    print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ОПУСКАЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)
+                    print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ОПУСКАЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
+                    
+            elif float(well_ROP[w_p]) > 1:                                                   #Поднимаем ВНК
+                if OWC_bot != '-' and OWC_top != '-':
+                    OWC_value = round(-(OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
+                elif OWC_bot != '-' and OWC_top == '-':
+                    OWC_value = round(max(OWC[k],OWC_bot)-max_OWC*k_OWC,1)
+                elif OWC_bot == '-' and OWC_top != '-' and OWC[k] > OWC_top:
+                    OWC_value = round(max(OWC[k] - (-OWC_top + OWC[k])*k_OWC,OWC_top),1)  
+                elif OWC_bot == '-' and OWC_top != '-' and OWC[k] <= OWC_top:
+                    OWC_value = 'skip'
+                else:
+                    OWC_value = '-'
+                if OWC_value == '-' or OWC_value == 'skip':
+                    print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ПОДНИМЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
+                    print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ПОДНИМЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)       
+                    print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ПОДНИМЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason) 
+                else:
+                    print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ПОДНИМЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
+                    print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ПОДНИМЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)  
+                    print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,k1,k2,'/-- '+str(w_p)+' ПОДНИМЕМ ВНК '+str(OWC[k])+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
             else:
-                OWC_value = '-'
-            if OWC_value == '-' or OWC_value == 'skip':
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
-            else:
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ОПУСКАЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)
-#        elif float(well_WC[w.name]) > 1:                   
-        elif float(well_ROP[w.name]) > 1:                                               #Поднимаем ВНК
-            if OWC_bot != '-\n' and OWC_top != '-':
-                OWC_value = round(-(OWC_bot-OWC_top)*k_OWC + (OWC_bot+OWC_top)/2,1)
-            elif OWC_bot != '-\n' and OWC_top == '-':
-                OWC_value = round(max(OWC_3,OWC_bot)-max_OWC*k_OWC,2)
-            elif OWC_bot == '-\n' and OWC_top != '-' and OWC_3 > OWC_top:
-                OWC_value = round(max(OWC_3 - (-OWC_top + OWC_3)*k_OWC,OWC_top),1)  
-            elif OWC_bot == '-\n' and OWC_top != '-' and OWC_3 <= OWC_top:
-                OWC_value = 'skip'
-            else:
-                OWC_value = '-'
-            if OWC_value == '-' or OWC_value == 'skip':
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)    
-                print('--ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason)  
-            else:
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t')
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=arr_OWC)     
-                print('ARR_OWC',OWC_value,x_well,x_well,y_well,y_well,min(zone3),max(zone3),'/-- '+str(well_prod)+' ПОДНИМЕМ ВНК '+str(OWC_3)+' ПН '+str(OWC_top)+' КВ '+str(OWC_bot),sep='\t',file=reason) 
-        else:
-            pass 
-  
-#    print('ARR_OWC',depth,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/--',w.name,sep='\t',file=arr_OWC)     
-#    print('ARR_OWC',depth,x_well,x_well,y_well,y_well,min(zone1),max(zone1),'/--',w.name,sep='\t')   
+                pass 
 
 print('EQUALS\n',file=arr_mult_file)
 print('EQUALS\n',file=arr_perf)
@@ -844,8 +739,7 @@ for m in get_all_models():
             well_set.add(well_prod)
 #            if prod_adapt_set & well_set != set():  #СРАВНЕНИЕ СО СПИСКОМ СКВАЖИН КОТОРЫЕ ИМЕЮТ НАИБОЛЬШУЮ ДОБЫЧУ, НО НЕ САДАПТИРОВАНИЫ
             if (WOPTH[m,w].max(dates='all').to_list()[0]) > min_oil_prod:
-    #TRACER
-    #        try:
+
                 if float(well_ROP[well_prod]) > 1:
                     recomand = 'Увеличить_обводненность'
                 elif float(well_ROP[well_prod]) < 1:
@@ -854,12 +748,12 @@ for m in get_all_models():
                     recomand = ''
                 reason = open(get_project_folder()+'/skript/reason/'+well_prod+'.txt','w')
                 print('\n'+str(well_prod))
-                print('РАБОТА НА ПЛАСТЫ: ',well_perf[well_prod],sep='\t')
+                print('РАБОТА НА ПЛАСТЫ: ',well_perf_prod[well_prod],sep='\t')
                 print('РАСПРЕДЕЛЕНИЕ ДОБЫЧИ ВОДЫ ПО ПЛАСТАМ: ',well_WC_interval[well_prod],sep='\t')
+                ZONES(well_prod)
                 print('ДОБЫЧА_ТРАССЕРА_ОТ_НАГНЕТАТЕЛЬНЫХ_СКВАЖИН: ',well_trac_RP[well_prod],sep='\t')
                 print('ОТНОШЕНИЕ_НАКОПЛЕННОЙ_ДОБЫЧИ_НЕФТИ_РАСЧЕТ/ИСТОРИЯ: ',well_ROP[well_prod],recomand,sep='\t')
-    
-                print('РАБОТА НА ПЛАСТЫ: ',well_perf[well_prod],sep='\t',file=reason)
+                print('РАБОТА НА ПЛАСТЫ: ',well_perf_prod[well_prod],sep='\t',file=reason)
                 print('РАСПРЕДЕЛЕНИЕ ДОБЫЧИ ВОДЫ ПО ПЛАСТАМ: ',well_WC_interval[well_prod],sep='\t',file=reason)
                 print('ДОБЫЧА_ТРАССЕРА_ОТ_НАГНЕТАТЕЛЬНЫХ_СКВАЖИН: ',well_trac_RP[well_prod],sep='\t',file=reason)
                 print('ОТНОШЕНИЕ_НАКОПЛЕННОЙ_ДОБЫЧИ_НЕФТИ_РАСЧЕТ/ИСТОРИЯ: ',well_ROP[well_prod],recomand,sep='\t',file=reason)
@@ -878,53 +772,46 @@ for m in get_all_models():
                     print('НА_СКВАЖИНЕ_БЫЛИ_ОБНАРУЖЕНЫ_НАРУШЕНИЯ_ОК/ЗАКОЛОННЫЕ_ПЕРЕТОКИ')
                     if float(well_ROP[well_prod]) > 1:
                         print('NNC',well_picks[well_prod].split(' ')[0],well_picks[well_prod].split(' ')[1],'k1',well_picks[well_prod].split(' ')[0],well_picks[well_prod].split(' ')[1],'k2',sep='\t')
-                if float(well_ROP[w.name]) > 0:
-                    dict_well_tracer = open(get_project_folder()+'/skript/tracer_prod/'+str(w.name)+'.txt','r')
-                    well_tracer = eval(dict_well_tracer.read())
-                    
-                    for i in well_tracer.values():
-                        dolya_zak = float(i)/sum(list(well_tracer.values()))*float(well_trac_RP[w.name])
-                        if dolya_zak > 0.1:
-                            well_inj = get_key(i)
-                            #print(well_inj,round(dolya_zak,2))
-                    
-    #                        well_inj = get_key(max(well_tracer.values()))[1:]
-    
-    
+
+                try:
+                    tracer_RWI_file = open(get_project_folder()+'/skript/tracer_rwi/'+str(well_prod)+'.txt','r') 
+                    tracer_RWI = eval(tracer_RWI_file.read())
+                    dif_oil_prod_len = len(str(int(abs((wopth[m,w].max(dates='all')-wopt[m,w].max(dates='all')).to_list()[0]))))-1
+                    for well_inj,dolya_zak in tracer_RWI.items():
+                        if dolya_zak > 0.1 and well_inj != 'A':
                             x = round((float(well_picks[str(well_inj)].split(' ')[0])+float(well_picks[str(well_prod)].split(' ')[0]))/2)
                             y = round((float(well_picks[str(well_inj)].split(' ')[1])+float(well_picks[str(well_prod)].split(' ')[1]))/2)                         
-                            
                             try: 
                                 while well_picks_reverse[str(x)+' '+str(y)] != 0:
                                     if str(x)+' '+str(y) == well_picks[well_prod]:
                                         break
-    #                                print('!!!!!!!!!!!!!!!!!!')
                                     x = round((x + float(well_picks[str(well_prod)].split(' ')[0]))/2)
                                     y = round((y + float(well_picks[str(well_prod)].split(' ')[1]))/2)
                             except:
                                 pass
+                            ARR_MULT_IP(well_inj,well_prod)                               
+                    tracer_RWI_file.close()
+                except FileNotFoundError:
+                    pass
     
-                            #print(well_inj,set(well_perf[well_inj]),well_prod,set(well_perf[well_prod]))
-                            arr_mult(well_inj,well_prod)       
-                            dict_well_tracer.close()
-    
-                perf_mult(well_prod)
-    
-                if float(well_ROP[w.name]) > 0:
-                    OWC(well_prod)    
+                ARR_PERF(well_prod)
+                try:
+                    tracer_RWI_file = open(get_project_folder()+'/skript/tracer_rwi/'+str(well_prod)+'.txt','r') 
+                    tracer_RWI = eval(tracer_RWI_file.read())
+                    if tracer_RWI['A'] > 0:
+                        ARR_OWC(well_prod)
+                    tracer_RWI_file.close()
+                except FileNotFoundError:
+                    pass
                 reason.close()
-    #        except KeyError:
-    #            continue
 
 print('/',file=arr_mult_file)
 print('/',file=arr_perf)
 print('/',file=arr_OWC)        
 print(arr_perf_dict,file=arr_perf_dict_file)
 print(arr_mult_ip_dict,file=arr_mult_ip_dict_file)
-dict_well_trac_A.close()
 dict_well_trac_RP.close()
 dict_well_ROP.close()
-dict_well_perf.close()
 arr_mult_file.close()
 OWC_file.close()
 arr_OWC.close()
@@ -932,11 +819,10 @@ dict_well_WC_interval.close()
 arr_perf.close()
 arr_perf_dict_file.close()
 arr_mult_ip_dict_file.close()
-#OWC_interval.close()
 
-'''
-ИЗМЕНЕНИЕ ГЛУБИНЫ ВНК
-'''
+---------------------------------------------------------------------------------------------------------------------------------------------
+ОБВОДНЕНИЕ ОТ ВНК
+---------------------------------------------------------------------------------------------------------------------------------------------
 import re
 OWC_file = open(get_project_folder()+'/skript/data/OWC.txt','r')
 dict_well_trac_A_file = open(get_project_folder()+'/skript/dict/dict_well_trac_A.txt','r') 
@@ -974,14 +860,12 @@ for m in get_all_models():
             except KeyError:
                 pass
 
-
 ---------------------------------------------------------------------------------------------------------------------------------------------
 ОПРЕДЕЛЕНИЕ ВЛЯНИЯ МУЛЬТИПЛИКАТОРОВ
 ---------------------------------------------------------------------------------------------------------------------------------------------
 '''
 ОЦЕНКА РАССЧЕТА (+ АДАПТАЦИЯ УЛУЧШЕЛАСЬ, - АДАПТАЦИЯ УХУЧШЕЛАСЬ)
 ЕСЛИ ОТКРЫВАЕМ ИСХОДНУЮ МОДЕЛЬ
-'''
 count = 0
 hist_oil = dict()
 hist_liq = dict()
@@ -1006,6 +890,7 @@ for m in get_all_models():
                 
 print(analysis,file=dict_analysis)
 dict_analysis.close()
+'''
 '''
 ОЦЕНКА РАССЧЕТА (+ АДАПТАЦИЯ УЛУЧШЕЛАСЬ, - АДАПТАЦИЯ УХУЧШЕЛАСЬ)
 ЕСЛИ ОТКРЫВАЕМ НОВУЮ РАССЧИТАННУЮ МОДЕЛЬ
@@ -1105,11 +990,11 @@ MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
 upgrade = 5     #ПРОЦЕНТ УЛУЧШЕНИЯ (ЕСЛИ МЕНЬШЕ ТО НЕ ВКЛЮЧАЕМ В СПИСОК)
 
 dict_analysis = open(get_project_folder()+'/skript/analysis/dict_analysis.txt','r')
-dict_well_perf = open(get_project_folder()+'/skript/dict/dict_well_perf.txt','r')
+#dict_well_perf = open(get_project_folder()+'/skript/dict/dict_well_perf.txt','r')
 arr_old = open(get_project_folder()+'/skript/analysis/'+str(name)+'_old.txt','r')
 arr_new = open(get_project_folder()+'/skript/analysis/'+str(name)+'_new.txt','w')
 analysis = eval(dict_analysis.read())
-well_perf = eval(dict_well_perf.read())
+#well_perf = eval(dict_well_perf.read())
 
 content = arr_old.readlines()
 content_matrix = [[content[i].split('\t')[j] for j in range(len(content[i].split('\t')))] for i in range(len(content))] 
@@ -1131,7 +1016,7 @@ for n,j in enumerate(content):
             
 print('/',file=arr_new)
 dict_analysis.close()
-dict_well_perf.close()
+#dict_well_perf.close()
 arr_old.close()
 arr_new.close()
 
@@ -1144,7 +1029,7 @@ max_mult = 10
 from math import sqrt
 file_old = open(get_project_folder()+'/skript/link_up/'+name+'_old.txt','r')
 file_new = open(get_project_folder()+'/skript/link_up/'+name+'_new.txt','r')
-file_linked = open(get_project_folder()+'/skript/link_up/'+name+'_lined.txt','w')
+file_linked = open(get_project_folder()+'/skript/link_up/'+name+'_linked.txt','w')
 content_1 = file_old.readlines()
 content_2 = file_new.readlines()
 content_matrix_1 = [[content_1[i].split('\t')[j] for j in range(len(content_1[i].split('\t')))] for i in range(len(content_1))] 
@@ -1213,6 +1098,7 @@ dict_well_picks_reverse.close()
 '''
 перфорация на горизонты well:(123)
 '''
+
 dict_well_perf = open(get_project_folder()+'/skript/dict/dict_well_perf.txt','w')
 D0 = set([i for i in range(1,16)])
 D1ab = set([i for i in range(18,49)])
@@ -1233,6 +1119,53 @@ for m in get_all_models():
         print(w.name,well_perf_list,well_layer)
         well_perf[str(w.name)] = str(well_perf_list)
 print(well_perf,file=dict_well_perf)
+
+'''
+перфорация на горизонты well:(123) ДОБЫВАЮЩИЕ СКВАЖИНЫ И НАГНЕТАТЕЛЬНЫЕ СКВАЖИНЫ
+'''
+MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
+MODEL_CELLS_set = {k:{int(i) for i in range(int(v.split(',')[0]),int(v.split(',')[1])+1 )} for k,v in MODEL_CELLS.items()}
+dict_well_perf_prod = open(get_project_folder()+'/skript/dict/dict_well_perf_prod.txt','w')
+dict_well_perf_inj = open(get_project_folder()+'/skript/dict/dict_well_perf_inj.txt','w')
+for m in get_all_models():
+    if flpth[m].max(dates='all') > 0:
+        well_prod_perf = dict()
+        well_inj_perf = dict()
+        for w in get_all_wells():
+            if wopth[m,w].max(dates='all') > 0:
+                well_con_prod_set = set()
+                well_prod_perf[w.name] = ''
+                for t in get_all_timesteps():
+                    if wlprh[m,w,t] > 0:
+                        for c in w.connections:
+                            if clpr[m,c,t] != 0:
+                                well_con_prod_set.add(c.k)
+                print(w.name,'prod',well_con_prod_set,sep='\t')
+                for k,v in MODEL_CELLS_set.items():
+                    if well_con_prod_set & v != set():
+                        well_prod_perf[w.name] += k
+                        
+            if wwith[m,w].max(dates='all') > 0:
+                well_con_inj_set = set()
+                well_inj_perf[w.name] = ''
+                for t in get_all_timesteps():
+                    if wwirh[m,w,t] > 0:
+                        for c in w.connections:
+                            if cwir[m,c,t] != 0:
+                                well_con_inj_set.add(c.k)
+                print(w.name,'inj',well_con_inj_set,sep='\t')
+                for k,v in MODEL_CELLS_set.items():
+                    if well_con_inj_set & v != set():
+                        well_inj_perf[w.name] += k
+                        
+        print('РАБОТА НА ПЛАСТЫ, ДОБЫВАЮЩИЕ СКВАЖИНЫ: ',well_prod_perf,sep='\t')
+        print('РАБОТА НА ПЛАСТЫ, НАГНЕТАТЕЛЬНЫЕ СКВАЖИНЫ: ',well_inj_perf,sep='\t')
+        
+        print(well_prod_perf,sep='\t',file=dict_well_perf_prod)
+        print(well_inj_perf,sep='\t',file=dict_well_perf_inj)   
+        dict_well_perf_prod.close()
+        dict_well_perf_inj.close()        
+            
 '''
 начало и конец работы добывающей и нагнетательной скважины
 '''
@@ -1805,9 +1738,9 @@ MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
 max_mult = 2
 file_KRWR = open(get_project_folder()+'/skript/ARR_KRWR.txt','w')
 dict_well_picks = open(get_project_folder()+'/skript/dict/dict_well_picks.txt','r')
-dict_well_perf = open(get_project_folder()+'/skript/dict/dict_well_perf.txt','r')
+dict_well_perf_prod = open(get_project_folder()+'/skript/dict/dict_well_perf_prod.txt','r')
 well_picks = eval(dict_well_picks.read())
-well_perf = eval(dict_well_perf.read())
+well_perf_prod = eval(dict_well_perf_prod.read())
 print('EQUALS\n',file=file_KRWR)
 for m in get_all_models():
     for w in get_all_wells():
@@ -1822,7 +1755,7 @@ for m in get_all_models():
                 x = int(well_picks[str(w.name)].split(' ')[0])
                 y = int(well_picks[str(w.name)].split(' ')[1])
                 for k,v in MODEL_CELLS.items():
-                    for i in set(well_perf[w.name]):
+                    for i in set(well_perf_prod[w.name]):
                         if set(k)&set(i)!=set():
                             print('ARR_KRWR',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ %s perf %s' %(w.name,well_perf[w.name]),sep='\t')
                             print('ARR_KRWR',mult,x,x,y,y,int(v.split(',')[0]),int(v.split(',')[1]),'/ %s perf %s' %(w.name,well_perf[w.name]),sep='\t',file=file_KRWR)
@@ -2389,6 +2322,7 @@ arr_cut_dict_file.close()
 ARR_CUT соединение 2 файлов
 ---------------------------------------------------------------------------------------------------------------------------------------------
 import re
+max_mult = 0.05
 #result = re.sub('@\w+.(\w+)','fuck', 'abc.test@gmail.com, xyz@test.in, test.first@analyticsvidhya.com, first.test@rest.biz')
 #print(result)
 
@@ -2417,10 +2351,20 @@ def start_inj_date(i_w):
                 if float(wwirh[m,i_w,t].to_list()[0]) > 0:
                     return t.name
 
+print('ТОЛЬКО СТАРОЕ МНОЖЕСТВО: ', set_old - set_new)
+
+for well in set_old - set_new:
+    mult = arr_cut_dict_old[well]
+    arr_cut_dict_linked[well] = mult
+    
 print('ПЕРЕСЕЧЕНИЕ НОВОГО И СТАРОГО МНОЖЕСТВА: ',set_new & set_old)
 
 for well in set_new & set_old:
     mult = round(arr_cut_dict_old[well]*sqrt(arr_cut_dict_new[well]),2)
+    if mult > max_mult:
+        mult = max_mult
+    elif mult < 1/max_mult:
+        mult = round(1/max_mult,2)
     arr_cut_dict_linked[well] = mult 
     match = re.findall('{}\t[0-9.]+\tperf\t[0-9.]+\t[0-9.]+\t[0-9.]+\t[0-9.]+\t[0-9.]+\t--'.format(well),perf_old)
     start_date = datetime.strptime(start_inj_date(well), "%d.%m.%Y")
@@ -2440,6 +2384,7 @@ for well in set_new - set_old:
         m_i = m.split('\t')
         if datetime.strptime(str(m_i[1]), "%d.%m.%Y") < start_date and m_i[2]=='perf':
             perf_add = perf_add+str(m_i[0])+'\t'+start_date.strftime('%d.%m.%Y')+'\t'+str(m_i[2])+'\t'+str(m_i[3])+'\t'+str(m_i[4])+'\t'+str(m_i[5])+'\t'+str(m_i[6])+'\t'+str(mult)+'\t'+str(m_i[8])+'\n'
+#            print(str(m_i[0])+'\t'+str(m_i[1])+'\t'+start_date.strftime('%d.%m.%Y')+'\t'+str(mult))
         elif datetime.strptime(str(m_i[1]), "%d.%m.%Y") < start_date and m_i[2]=='sque':
             perf_add = perf_add+str(m_i[0])+'\t'+start_date.strftime('%d.%m.%Y')+'\t'+str(m_i[2])+'\t'+str(m_i[3])+'\t'+str(m_i[4])+'\t'+str(m_i[5])+'\t'+str(m_i[6])+'\t'+str(m_i[7])+'\t'+str(m_i[8])+'\n'
         elif datetime.strptime(str(m_i[1]), "%d.%m.%Y") >= start_date and m_i[2]=='perf':
@@ -2486,19 +2431,14 @@ perf.close()
 perf_new.close()        
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
-ДЛЯ ИЗМЕНЕИЯ ОФП (На сколько нужно изменить KRWR по скважинно и в общем) / ЗАПИСЬ В СЛОВАРЬ НЕВЯЗКИ ПО ЗОНАМ
+ОБВОДНЕННОСТЬ ПО ПЛАСТАМ (На сколько нужно изменить KRWR по скважинно и в общем) / ЗАПИСЬ В СЛОВАРЬ НЕВЯЗКИ ПО ЗОНАМ
 ---------------------------------------------------------------------------------------------------------------------------------------------
+months = 5
+
 MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
 MAIN = {'100', '101', '10106', '10107', '11700', '11701', '11919', '11920', '11921', '11921D', '11979', '11980', '11981', '11982', '11983', '11984', '11985', '11986', '11987', '11988', '12042', '12043', '12044', '12045', '12233', '12234', '12235', '12236', '12237', '12238', '12239', '12240', '12241', '12242', '13401', '13402', '13403', '13404', '13405', '13406', '13407', '13408', '13409', '13410', '13411', '13412', '13413', '13414', '13415', '13416', '13417', '13418', '13419', '13420', '13421', '13422', '13423', '13424', '13425', '13426', '13427', '13427D', '13428', '13429', '13430', '13431', '13432', '13433', '13434', '13435', '13436', '13437', '13438', '13439', '13440', '13441', '13442', '13444', '13445', '13446', '13448', '13449', '13450', '13451', '13452', '13453', '13454', '13455', '13456', '13457', '13458', '13458D', '13459', '13460', '13461', '13462', '13463', '13464', '13465', '13466', '13467', '13468', '13469', '13470', '13471', '13472', '13473', '13474', '13475', '13476', '13477', '13478', '13479', '13480', '13481', '13483', '13484', '13485', '13486', '13487', '13488', '13489', '13490', '13491', '13492', '13493', '13494', '13495', '13496', '13497', '13498', '13499', '13501', '13503', '13504', '13506', '13507', '13508', '13509', '13510', '13511', '13512', '13513', '13514', '13515', '13516', '13518', '13519', '13520', '13521', '13522', '13523', '13524', '13525', '13526', '13527', '13528', '13529', '13530', '13531', '13532', '13533', '13534', '13535', '13536', '13537', '13538', '13539', '13540', '13541', '13542', '13543', '13544', '13545', '13546', '13547', '13548', '13549', '13550', '13551', '13552', '13553', '13554', '13555', '13556', '13557', '13558', '13559', '13560', '13561', '13563', '13564', '13565', '13566', '13567', '13568', '13569', '13570', '13572', '13573', '13574', '13575', '13576', '13577', '13578', '13579', '13580', '13581', '13582', '13583', '13584', '13585', '13586', '13588', '13589', '13590', '13591', '13592', '13593', '13594', '13595', '13596', '13597', '13598', '13599', '13600', '15113', '15113D', '15114', '16304', '16336', '16482', '16526', '16529', '16530', '16537', '16539', '16540', '16541', '16544', '16547', '17419', '17483', '21292', '21440', '21493', '21502', '21503', '21504', '21505', '21506', '21507', '21508', '21509', '21510', '21511', '21512', '21513', '21514', '21515', '21516', '21517', '21519', '21520', '21521', '21522', '21523', '21524', '21525', '21526', '21527', '21528', '21529', '21530', '21531', '21532', '21533', '21535', '21536', '21537', '21538', '21539', '21540', '21541', '21542', '21543', '21544', '21545', '21546', '21547', '21548', '21550', '21551', '21552', '21553', '21555', '21556', '21557', '21558', '21559', '21560', '21561', '21562', '21563', '21564', '21565', '21566', '21567', '21568', '21569', '21570', '21571', '21572', '21573', '21575', '21576', '21577', '21578', '21579', '21580', '21581', '21582', '21583', '21584', '21587', '21588', '21589', '21590', '21591', '21592', '21593', '21594', '21595', '21596', '21598', '21599', '21600', '21601', '21602', '21603', '21604', '21607', '21608', '21611', '21612', '21614', '21615', '21616', '21617', '21618', '21619', '21620', '21621', '21622', '21625', '21626', '21627', '21629', '21630', '21632', '21633', '21634', '21635', '21636', '21637', '21638', '21640', '21641', '21642', '21643', '21645', '21646', '21647', '21648', '21650', '21651', '21652', '21653', '21654', '21655', '21656', '21658', '21659', '21660', '21661', '21662', '21663', '21664', '21665', '21666', '21667', '21668', '21671', '21672', '21673', '21674', '21675', '21678', '21679', '21680', '21681', '21682', '21683', '21684', '21684A', '21685', '21686', '21687', '21688', '21689', '21691', '21692', '21694', '21696', '21697', '21698', '21699', '21700', '21701', '21702', '21703', '21704', '21705', '21706', '21707', '21708', '21710', '21711', '21712', '21713', '21714', '21715', '21716', '21717', '21718', '21719', '21720', '21721', '21724', '21725', '21726', '21727', '21731', '21732', '21733', '21734', '21735', '21736', '21738', '21740', '21741', '21742', '21743', '21744', '21745', '21746', '21747', '21748', '21750', '21751', '21753', '21755', '21757', '21758', '21759', '21760', '21761', '21762', '21763', '21764', '21765', '21766', '21767', '21768', '21769', '21771', '21772', '21773', '21774', '21775', '21776', '21777', '21778', '21779', '21780', '21781', '21782', '21783', '21784', '21785', '21786', '21787', '21789', '21790', '21791', '21793', '21794', '21796', '21798', '21799', '21800', '25283', '25284', '25285', '25286', '25287', '25288', '25289', '25290', '25293', '25294', '25297', '25298', '25299', '25300', '27303', '27305', '27310', '27315', '27385', '27395', '27481', '27483', '27484', '27487', '32801', '32804', '32805', '32806', '32810', '32813', '32814', '32816', '32817', '32818', '32819', '32820', '32821', '32826', '32827', '32830', '32835', '32836', '32842', '32843', '32844', '32845', '32846', '32854', '32863', '32866', '32868', '32869', '32874', '32875', '32876', '32877', '32878', '32881', '32882', '32883', '32884', '32885', '32886', '32887', '32888', '32889', '32890', '32892', '32893', '32894', '32895', '32896', '32898', '32907', '32910', '32914', '32916', '32917', '32918', '32919', '32920', '32921', '32922', '32923', '32924', '32925', '32929', '32930', '32931', '32940', '32941', '32943', '32947', '32948', '32950', '32954', '32955', '32956', '32957', '32958', '32959', '32960', '3498', '3515', '3516', '3517', '3556', '3557', '3558', '3597', '48', '48D', '49', '5042', '51', '527', '53', '530', '54', '570', '571', '5712', '5713', '5714', '5715', '5716', '5717', '5718', '5719', '5719D', '572', '5720', '5721', '5722', '5722A', '5723', '5724', '5725', '5725A', '5726', '5727', '5728', '5728A', '5729', '5730', '5731', '5731A', '5732', '5733', '5734', '5735', '5736', '5737', '5738', '5739', '5740', '5741', '5741D', '5742', '5743', '5744', '5745', '5746', '5747', '5748', '5749', '5750', '5751', '58', '5801', '5802', '5803', '5804', '5805', '5806', '5806D', '5807', '5807D', '5808', '5809', '5810', '5811', '5811D', '5812', '5813', '5814', '5815', '5815D', '5816', '5816D', '5817', '5818', '5819', '5820', '5821', '5822', '5823', '5824', '5825', '5826', '5827', '5827D', '5828', '5829', '5830', '5831', '5832', '5833', '5834', '5835', '5836', '5837', '5838', '5839', '5840', '5840D', '5841', '5842', '5843', '5844', '5845', '5846', '5847', '5848', '5849', '5850', '5851', '5852', '5853', '5854', '5855', '5856', '5857', '5858', '5859', '5860', '5861', '5862', '5863', '5864', '5864D', '5865', '5865D', '5866', '5867', '5868', '5869', '5870', '5871', '5872', '5873', '5873D', '5874', '5875', '5876', '5877', '5878', '5879', '5880', '5881', '5882', '5883', '5884', '5884D', '5885', '5886', '5887', '5888', '5890', '5891', '5892', '5893', '5894', '5895', '5896', '5897', '5897D', '5898', '5899', '5900', '5901', '5902', '5902D', '5903', '5904', '5905', '5906', '5906D', '5907', '5907D', '5908', '5909', '5909D', '5910', '5911', '5912', '5913', '5913A', '5914', '5915', '5916', '5917', '5918', '5919', '5920', '5921', '5922', '5923', '5924', '5925', '5926', '5927', '5927D', '5928', '5928D', '5929', '5929D', '5930', '5930D', '5931', '5932', '5933', '5934', '5935', '5936', '5937', '5938', '5939', '5940', '5940D', '5941', '5941D', '5942', '5943', '5944', '5945', '5946', '5947', '5947D', '5948', '5949', '5950', '5951', '5952', '5953', '5954', '5955', '5955D', '5956', '5956D', '5957', '5958', '5959', '5960', '5961', '5962', '5963', '5964', '5965', '5966', '5967', '5968', '5969', '5970', '5971', '5972', '5973', '5974', '5975', '5976', '5977', '5978', '5979', '5980', '5981', '5982', '5983', '5984', '5985', '5986', '5987', '5988', '5991', '5992', '5993', '5994', '5995', '5996', '5997', '5998', '5999', '651', '652', '653', '7400', '7401', '7402', '77D', '8000', '8001', '8002', '8002D', '8003', '8004', '8005', '8006', '8007', '8008', '8008D', '8009', '8010', '8011', '8012', '8013', '8014', '8015', '8016', '8017', '8018', '8019', '8020', '8021', '8021D', '8022', '8022D', '8023', '8024', '8025', '8026', '8027', '8028', '8029', '8030', '8031', '8032', '8033', '8034', '8035', '8036', '8037', '8038', '8039', '8040', '8041', '8042', '8043', '8044', '8045', '8046', '8047', '8048', '8049', '8050', '8051', '8052', '8053', '8053B', '8054', '8055', '8056', '8057', '8058', '8059', '8060', '8061', '8062', '8063', '8064', '8065', '8066', '8067', '8068', '8069', '8070', '8071', '8072', '8073', '8074', '8075', '8076', '8077', '8078', '8079', '8080', '8081', '8081D', '8082', '8083', '8084', '8085', '8086', '8087', '8088', '8089', '8090', '8091', '8092', '8093', '8094', '8094D', '8095', '8096', '8097', '8098', '8099', '8100', '8101', '8102', '8103', '8104', '8106', '8107', '8108', '8109', '8110', '8111', '8112A', '8113', '8114', '8115', '8116', '8117', '8118', '8119', '8120', '8121', '8122', '8123', '8124', '8125', '8127', '8128', '8129', '8131', '8132', '8133', '8134', '8135', '8136', '8137', '8138', '8139', '8140', '8141', '8141D', '8142', '8143', '8144', '8145', '8146', '8147', '8148A', '8149', '8150', '8151', '8152', '8153', '8154', '8155', '8156', '8157', '8158', '8159', '8160', '8161', '8162', '8162D', '8163', '8164', '8165', '8166', '8167', '8168', '8168D', '8169', '8170', '8171', '8172', '8173', '8174', '8175', '8176', '8177', '8178', '8179', '8180', '8181', '8182', '8183', '8184', '8185', '8186', '8187', '8188', '8189', '8190', '8191', '8192', '8193', '8194', '8195', '8196', '8197', '8198', '8198D', '8199', '8200', '84', '84D'}
 count = dict()
 dict_well_ROP_file = dict()
-
-'''
-i = 'vars'
-mult = 123
-exec('str_{} = {}'.format(i,mult))
-print(eval('str_{}'.format(i)))
-'''
 
 for k,v in MODEL_CELLS.items():
     dict_well_ROP_file[k] = open(get_project_folder()+'/skript/dict/dict_well_ROP_zone_'+k+'.txt','w')  
@@ -2513,14 +2453,11 @@ for m in get_all_models():
             if wlpth[m,w].max(dates='all') > 0 and MAIN & well != set():
                 d_well_oil_h = dict()
                 d_well_oil_c = dict()
-    #            d_well_wat_h = dict()
-    #            d_well_wat_c = dict()
                 for t in get_all_timesteps():
                     d_inter = dict()
                     for c in w.connections:
                         for key,val in MODEL_CELLS.items():
                             if clpr[m,c,t].to_list()[0] != 0 and int(val.split(',')[0]) <= int(c.k) <= int(val.split(',')[1]):
-    #                            print(w.name,c.k,t.name,round(clpr[m,c,t].to_list()[0],1))
                                 try:
                                     d_inter[key] = d_inter[key] + clpr[m,c,t].to_list()[0]
                                 except KeyError:
@@ -2528,22 +2465,24 @@ for m in get_all_models():
                     if len(d_inter) == 1:
                         for k,v in d_inter.items():
                             key = k
-    #                    print(d_inter,round(wopr[m,w,t].to_list()[0],1),round(woprh[m,w,t].to_list()[0],1),key)
                         try:
                             d_well_oil_h[key] = d_well_oil_h[key] + (woprh[m,w,t]*weff[m,w,t]).to_list()[0]
                         except KeyError:
                             d_well_oil_h[key] = (woprh[m,w,t]*weff[m,w,t]).to_list()[0]
                         try:
                             d_well_oil_c[key] = d_well_oil_c[key] + (wopr[m,w,t]*weff[m,w,t]).to_list()[0]
+                            c_w += 1
                         except KeyError:
                             d_well_oil_c[key] = (wopr[m,w,t]*weff[m,w,t]).to_list()[0]
+                            c_w = 1
                 for k,v in d_well_oil_h.items():
                     try:
                         mult = round(d_well_oil_c[k]/v,3)
-                        exec('dict_well_ROP_{}[w.name] = {}'.format(k,mult))
                         print(w.name,k,mult,sep='\t')
                         d_model[k] = d_model[k] + d_well_oil_c[k]/v
                         count[k] = count[k] + 1
+                        if c_w >= months:
+                            exec('dict_well_ROP_{}[w.name] = {}'.format(k,mult))
                     except ZeroDivisionError:
                         print('ZeroDivisionError',w.name,k,d_well_oil_c[k],v)
                     except KeyError:
@@ -2557,17 +2496,25 @@ for k,v in MODEL_CELLS.items():
     print(eval('dict_well_ROP_{}'.format(k)),file=dict_well_ROP_file[k])
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
-ДЛЯ ИЗМЕНЕНИЯ ПЛАСТОВОГО ДАВЛЕНИЯ (НА КАКИЕ ПЛАСТЫ НУЖНО ИЗМЕНИТЬ ПЛАСТОВОЕ ДАВЛЕНИЕ, ЧТОБЫ ВЫРОВНИТЬ ПРОФИЛЬ ПРИТОКА) (не дописан)
+ДАВЛЕНИЕ ПО ПЛАСТАМ (НА КАКИЕ ПЛАСТЫ НУЖНО ИЗМЕНИТЬ ПЛАСТОВОЕ ДАВЛЕНИЕ, ЧТОБЫ ВЫРОВНИТЬ ПРОФИЛЬ ПРИТОКА) 
 ---------------------------------------------------------------------------------------------------------------------------------------------
+months = 5
+
 MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
+#MODEL_CELLS = {'1': '2,14','2': '16,69'}
+dict_well_Press_file = dict()
 
 MODEL_CELLS_set = {k:{int(i) for i in range(int(v.split(',')[0]),int(v.split(',')[1])+1 )} for k,v in MODEL_CELLS.items()}
 for k in MODEL_CELLS.keys():
+    dict_well_Press_file[k] = open(get_project_folder()+'/skript/dict/dict_well_Press_zone_'+k+'.txt','w')  
+    exec('dict_well_Press_{} = dict()'.format(k))
     exec('BHP_h_list_{} = dict()'.format(k))
     exec('BHP_c_list_{} = dict()'.format(k))
     exec('RP_h_list_{} = dict()'.format(k))
     exec('RP_c_list_{} = dict()'.format(k))
     exec('count_{} = dict()'.format(k))
+    exec('summary_p_{} = []'.format(k))
+    exec('count_{} = 0'.format(k))
 
 from datetime import datetime
 from math import sqrt,ceil
@@ -2575,95 +2522,110 @@ from math import sqrt,ceil
 RP_h_interp = graph (type = 'well', default_value = 0)
 BHP_h_interp = graph (type = 'well', default_value = 0)
 for m in get_all_models():
-    for w in get_all_wells('51'):
-
-#        exec('BHP_h_list_{} = dict()'.format(w.name))
-#        exec('BHP_c_list_{} = dict()'.format(w.name))
-#        exec('RP_h_list_{} = dict()'.format(w.name))
-#        exec('RP_c_list_{} = dict()'.format(w.name))
-        RP_h_list = []
-        BHP_h_list = []
-        t1 = c1 = 0
-        for t in get_all_timesteps():
-            RP_h = round(wthph[m,w,t].to_list()[0],1)
-            RP_c = round(wbp9[m,w,t].to_list()[0],1)
-            BHP_h = round(wbhph[m,w,t].to_list()[0],1)
-            BHP_c = round(wbhp[m,w,t].to_list()[0],1)
-            if RP_h > 0:
-                RP_h_list.append((t.to_datetime(),RP_h))
-                if c1 == 0:
-                    c1 = 1
-                    t1 = datetime.strptime(t.name, "%d.%m.%Y")
-            if BHP_h > 0:
-                BHP_h_list.append((t.to_datetime(),BHP_h))
-                if c1 == 0:
-                    c1 = 1
-                    t1 = datetime.strptime(t.name, "%d.%m.%Y")
-            if len(RP_h_list) > 2:
-                RP_h_interp[m,w] = create_table_vs_time(RP_h_list)
-            if len(BHP_h_list) > 2:
-                BHP_h_interp[m,w] = create_table_vs_time(BHP_h_list)
-                
-        for t in get_all_timesteps():
-            try:
-                if datetime.strptime(t.name, "%d.%m.%Y") < t1:
-                    BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
-            except TypeError:
-                pass
-            if wlprh[m,w,t] == 0 and wwirh[m,w,t] == 0:
-                BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
-            else:
-                if BHP_h_interp[m,w,t] > RP_h_interp[m,w,t] and wlprh[m,w,t] > 0:
-                    BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
-                if BHP_h_interp[m,w,t] < RP_h_interp[m,w,t] and wwirh[m,w,t] > 0:
-                    BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
+    if flpth[m].max(dates='all') > 0:
+        for w in get_all_wells():
+            RP_h_list = []
+            BHP_h_list = []
+            t1 = c1 = 0
+            for t in get_all_timesteps():
+                RP_h = round(wthph[m,w,t].to_list()[0],1)
+                RP_c = round(wbp9[m,w,t].to_list()[0],1)
+                BHP_h = round(wbhph[m,w,t].to_list()[0],1)
+                BHP_c = round(wbhp[m,w,t].to_list()[0],1)
+                if RP_h > 0:
+                    RP_h_list.append((t.to_datetime(),RP_h))
+                    if c1 == 0:
+                        c1 = 1
+                        t1 = datetime.strptime(t.name, "%d.%m.%Y")
+                if BHP_h > 0:
+                    BHP_h_list.append((t.to_datetime(),BHP_h))
+                    if c1 == 0:
+                        c1 = 1
+                        t1 = datetime.strptime(t.name, "%d.%m.%Y")
+                if len(RP_h_list) > 2:
+                    RP_h_interp[m,w] = create_table_vs_time(RP_h_list)
+                if len(BHP_h_list) > 2:
+                    BHP_h_interp[m,w] = create_table_vs_time(BHP_h_list)
                     
-        for t in get_all_timesteps():
-            con = []
-            for c in w.connections:
-                if clpr[m,c,t].to_list()[0] != 0:
-                    con.append(c.k)
-#            print(con)
-            count = 0
-            for k,v in MODEL_CELLS_set.items():
-                if set(con) & set(v):
-                    count += 1
-                    zone = k
-            if count == 1 and BHP_h_interp[m,w,t] != 0 and RP_h_interp[m,w,t] != 0 and wbp9[m,w,t].to_list()[0] != 0 and wbhp[m,w,t].to_list()[0] != 0:
-#                print(w.name,t.name,zone)
+            for t in get_all_timesteps():
                 try:
-                    exec('BHP_h_list_{}[w.name] = BHP_h_list_{}[w.name] + BHP_h_interp[m,w,t]'.format(zone,zone))
-                    exec('BHP_c_list_{}[w.name] = BHP_c_list_{}[w.name] + wbp9[m,w,t].to_list()[0]'.format(zone,zone))
-#                    exec('RP_h_list_{}[w.name] = RP_h_list_{}[w.name] + RP_h_interp[m,w,t]'.format(zone,zone))
-#                    exec('RP_c_list_{}[w.name] = RP_c_list_{}[w.name] + wbhp[m,w,t].to_list()[0]'.format(zone,zone))
-                    exec('count_{}[w.name] += int(1)'.format(k))
-#                    print(w.name,t.name,eval('count_{}[w.name]'.format(k)),zone)
+                    if datetime.strptime(t.name, "%d.%m.%Y") < t1:
+                        BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
+                except TypeError:
+                    pass
+                if wlprh[m,w,t] == 0 and wwirh[m,w,t] == 0:
+                    BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
+                else:
+                    if BHP_h_interp[m,w,t] > RP_h_interp[m,w,t] and wlprh[m,w,t] > 0:
+                        BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
+                    if BHP_h_interp[m,w,t] < RP_h_interp[m,w,t] and wwirh[m,w,t] > 0:
+                        BHP_h_interp[m,w,t] = RP_h_interp[m,w,t] = 0
+                        
+            for t in get_all_timesteps():
+                con = []
+                for c in w.connections:
+                    if clpr[m,c,t].to_list()[0] != 0:
+                        con.append(c.k)
+                count = 0
+                for k,v in MODEL_CELLS_set.items():
+                    if set(con) & set(v):
+                        count += 1
+                        zone = k
+                if count == 1 and BHP_h_interp[m,w,t] != 0 and RP_h_interp[m,w,t] != 0 and wbp9[m,w,t].to_list()[0] != 0 and wbhp[m,w,t].to_list()[0] != 0:
+                    try:
+                        exec('RP_h_list_{}[w.name] = RP_h_list_{}[w.name] + RP_h_interp[m,w,t]'.format(zone,zone))
+                        exec('RP_c_list_{}[w.name] = RP_c_list_{}[w.name] + wbhp[m,w,t].to_list()[0]'.format(zone,zone))
+    #                    exec('count_{}[w.name] += int(1)'.format(k))
+                    except KeyError:
+                        exec('RP_h_list_{}[w.name] = RP_h_interp[m,w,t]'.format(zone))
+                        exec('RP_c_list_{}[w.name] = wbhp[m,w,t].to_list()[0]'.format(zone))   
+    #                    exec('count_{}[w.name] = 1'.format(k))
+            for k,v in MODEL_CELLS.items():
+                try:
+                    p1 = (eval('RP_h_list_{}[w.name]'.format(k))).to_list()[0]
+                    p2 = (eval('RP_c_list_{}[w.name]'.format(k)))
+                    p = round(p2/p1,1)
+                    eval('summary_p_{}.append(p)'.format(k))
+                    exec('count_{} += int(1)'.format(k))
+                    print(w.name,k,p,sep='\t')     
+                    exec('dict_well_Press_{}[w.name] = {}'.format(k,p))
                 except KeyError:
-                    exec('BHP_h_list_{}[w.name] = BHP_h_interp[m,w,t]'.format(zone))
-                    exec('BHP_c_list_{}[w.name] = wbp9[m,w,t].to_list()[0]'.format(zone))
-#                    exec('RP_h_list_{}[w.name] = RP_h_interp[m,w,t]'.format(zone))
-#                    exec('RP_c_list_{}[w.name] = wbhp[m,w,t].to_list()[0]'.format(zone))   
-                    exec('count_{}[w.name] = 1'.format(k))
-#                    print(w.name,t.name,eval('count_{}[w.name]'.format(k)),zone)
-        for k in MODEL_CELLS_set.keys():
-            try:
-#                if exec('count_{}[w.name]>=5'.format(k)):
-#                print(w.name,'BHP_h',eval('BHP_h_list_{}[w.name]/count_{}[w.name]'.format(k,k)))     
-                print(w.name,k,round(eval('BHP_c_list_{}[w.name]/BHP_h_list_{}[w.name]'.format(k,k)).to_list()[0],3),(eval('count_{}[w.name]'.format(k))))  
-#                print(w.name,'RP_h',eval('RP_h_list_{}[w.name]/count_{}[w.name]'.format(k,k)))    
-#                print(w.name,'RP_c',eval('RP_c_list_{}[w.name]/RP_h_list_{}[w.name]'.format(k,k)))           
-            except KeyError:
-                print('pass',w.name,k)
-                pass
-        
-                
-#                for k,v in MODEL_CELLS.items():
-#                    if clpr[m,c,t].to_list()[0] != 0 and int(v.split(',')[0]) <= int(c.k) <= int(v.split(',')[1]):
-#                        zone[k][m,w,t] = int(k)
+                    pass
+        print('SUMMARY:')
+        for k,v in MODEL_CELLS.items():
+            if eval('count_{}'.format(k)) >= months:
+                print('zone:',k,round(eval('sum(summary_p_{})/count_{}'.format(k,k)),2),sep='\t')
+                print(eval('dict_well_Press_{}'.format(k)),file=dict_well_Press_file[k])
+            
        
 export(RP_h_interp, name = 'RP_hist')
 export(BHP_h_interp, name = 'BHP_hist')
-                
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+АНАЛИЗ ПО ПЛАСТАМ
+---------------------------------------------------------------------------------------------------------------------------------------------
+MODEL_CELLS = {'1': '1,16','2': '18,49', '3': '51,179'}
+
+for k in MODEL_CELLS.keys():
+    dict_well_Press_file = open(get_project_folder()+'/skript/dict/dict_well_Press_zone_'+k+'.txt','r') 
+    dict_well_ROP_file = open(get_project_folder()+'/skript/dict/dict_well_ROP_zone_'+k+'.txt','r')
+    dict_well_Press = eval(dict_well_Press_file.read())
+    dict_well_ROP = eval(dict_well_ROP_file.read())
+    
+    for w,rop in dict_well_ROP.items():
+        try:
+            print(w,k,rop,dict_well_Press[w],sep='\t')
+            if rop < 1 and dict_well_Press[w] > 1:
+                print('DOWN INJECTION ZONE: ',k)
+            elif rop > 1 and dict_well_Press[w] < 1:
+                print('UP INJECTION ZONE: ',k)     
+            else:
+                pass
+        except KeyError:
+            print(w,k,rop,'-',sep='\t')
+    
+    dict_well_Press_file.close()
+    dict_well_ROP_file.close()
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 ВИЗУАЛИЗАЦИЯ (на какие пласты работает)
